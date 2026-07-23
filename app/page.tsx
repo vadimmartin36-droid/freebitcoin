@@ -43,7 +43,8 @@ import {
   Activity,
   ChevronRight,
   Eye,
-  EyeOff
+  EyeOff,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -2554,6 +2555,432 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* 9. AUTH MODAL */}
+      <AnimatePresence>
+        {authModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop with strong blur and dark shade */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAuthModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute inset-0 bg-[#020208]/80 backdrop-blur-md"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="relative w-full max-w-md bg-[#090b1c]/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_25px_60px_-15px_rgba(247,151,30,0.15)] overflow-hidden"
+              style={{ fontFamily: 'Georgia' }}
+            >
+              {/* Top ambient orange glow orb */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-orange-500/10 rounded-full blur-[50px] pointer-events-none" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setAuthModal(prev => ({ ...prev, isOpen: false }))}
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all duration-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Form Content */}
+              <div className="relative z-10 space-y-6">
+                
+                {/* Header Section */}
+                <div className="text-center">
+                  <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-[#f7971e]/10 to-[#ffd200]/10 border border-orange-500/20 mb-4 shadow-[0_0_15px_rgba(247,151,30,0.1)]">
+                    <Coins className="w-6 h-6 text-[#ffd200]" />
+                  </div>
+                  
+                  {authModal.mode === 'login' && (
+                    <>
+                      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
+                        Вход в личный кабинет
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                        Введите свои учетные данные для доступа к симулятору майнинга и партнерским инструментам.
+                      </p>
+                    </>
+                  )}
+
+                  {authModal.mode === 'register' && (
+                    <>
+                      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
+                        Создать аккаунт партнера
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                        Регистрация занимает 1 минуту. Получите <span className="text-[#ffd200] font-bold">+1000 сатоши</span> моментально на баланс!
+                      </p>
+                    </>
+                  )}
+
+                  {authModal.mode === 'forgot' && (
+                    <>
+                      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
+                        Восстановление пароля
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                        Введите адрес электронной почты, указанный при регистрации, для восстановления доступа.
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Forms */}
+                {authModal.mode === 'login' && (
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    {/* Email Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Адрес</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <Mail className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="email"
+                          required
+                          value={authModal.email}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="your-email@example.com"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password Input */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Пароль</label>
+                        <button
+                          type="button"
+                          onClick={() => setAuthModal(prev => ({ ...prev, mode: 'forgot' }))}
+                          className="text-[10px] text-orange-400 hover:text-white transition-colors"
+                        >
+                          Забыли пароль?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <Lock className="w-4 h-4" />
+                        </span>
+                        <input
+                          type={authModal.showPassword ? 'text' : 'password'}
+                          required
+                          value={authModal.password}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="••••••••"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAuthModal(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-white transition-colors"
+                        >
+                          {authModal.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Login Action Button */}
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 mt-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(247,151,30,0.3)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                    >
+                      Войти в аккаунт
+                    </button>
+
+                    {/* OR divider */}
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-white/5"></div>
+                      <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-bold uppercase tracking-widest">ИЛИ</span>
+                      <div className="flex-grow border-t border-white/5"></div>
+                    </div>
+
+                    {/* Demo Login Button */}
+                    <button
+                      type="button"
+                      onClick={handleDemoLogin}
+                      className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                    >
+                      <Sparkles className="w-4 h-4 text-[#ffd200]" />
+                      Вход через Демо-профиль
+                    </button>
+                  </form>
+                )}
+
+                {authModal.mode === 'register' && (
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    {/* Name Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Никнейм / Ваше имя</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <User className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="text"
+                          required
+                          value={authModal.name}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Придумайте имя"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Адрес</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <Mail className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="email"
+                          required
+                          value={authModal.email}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="email@example.com"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Пароль</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <Lock className="w-4 h-4" />
+                        </span>
+                        <input
+                          type={authModal.showPassword ? 'text' : 'password'}
+                          required
+                          value={authModal.password}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="Придумайте пароль (мин. 6 знаков)"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAuthModal(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-white transition-colors"
+                        >
+                          {authModal.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Подтверждение пароля</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <Lock className="w-4 h-4" />
+                        </span>
+                        <input
+                          type={authModal.showPassword ? 'text' : 'password'}
+                          required
+                          value={authModal.confirmPassword}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          placeholder="Повторите пароль"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Simulation Switch (Beautiful dev tool inside) */}
+                    <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between gap-4 mt-2">
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-300">Режим симуляции ошибки</span>
+                        <span className="block text-[9px] text-slate-500">Позволяет проверить форму при сбое</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAuthModal(prev => ({ ...prev, errorSimulated: !prev.errorSimulated }))}
+                        className={cn(
+                          "w-10 h-6 rounded-full p-1 transition-all duration-300 flex items-center shrink-0",
+                          authModal.errorSimulated ? "bg-rose-500 justify-end" : "bg-white/10 justify-start"
+                        )}
+                      >
+                        <span className="w-4 h-4 bg-white rounded-full shadow-md" />
+                      </button>
+                    </div>
+
+                    {/* Register Action Button */}
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 mt-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(247,151,30,0.3)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                    >
+                      Создать кабинет
+                    </button>
+                  </form>
+                )}
+
+                {authModal.mode === 'forgot' && (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    {/* Email Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Адрес</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                          <Mail className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="email"
+                          required
+                          value={authModal.email}
+                          onChange={(e) => setAuthModal(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="email@example.com"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Forgot Action Button */}
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 mt-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(247,151,30,0.3)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                    >
+                      Восстановить пароль
+                    </button>
+                  </form>
+                )}
+
+                {/* Footer Switch links */}
+                <div className="pt-4 border-t border-white/5 text-center text-xs text-slate-400 font-medium">
+                  {authModal.mode === 'login' && (
+                    <p>
+                      Ещё нет аккаунта?{" "}
+                      <button
+                        onClick={() => setAuthModal(prev => ({ ...prev, mode: 'register' }))}
+                        className="text-orange-400 font-bold hover:underline"
+                      >
+                        Создать сейчас
+                      </button>
+                    </p>
+                  )}
+
+                  {authModal.mode === 'register' && (
+                    <p>
+                      Уже есть аккаунт?{" "}
+                      <button
+                        onClick={() => setAuthModal(prev => ({ ...prev, mode: 'login' }))}
+                        className="text-orange-400 font-bold hover:underline"
+                      >
+                        Войти в систему
+                      </button>
+                    </p>
+                  )}
+
+                  {authModal.mode === 'forgot' && (
+                    <button
+                      onClick={() => setAuthModal(prev => ({ ...prev, mode: 'login' }))}
+                      className="text-orange-400 font-bold hover:underline flex items-center justify-center gap-1 mx-auto"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5 rotate-180 text-orange-400" /> Вернуться на страницу входа
+                    </button>
+                  )}
+                </div>
+
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 10. AUTH RESULT MODAL */}
+      <AnimatePresence>
+        {authResult && authResult.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAuthResult(null)}
+              className="absolute inset-0 bg-[#020208]/85 backdrop-blur-md"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="relative w-full max-w-md bg-[#090b1c]/95 border border-white/10 rounded-3xl p-6 md:p-8 text-center shadow-2xl"
+              style={{ fontFamily: 'Georgia' }}
+            >
+              <button
+                onClick={() => setAuthResult(null)}
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all duration-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="space-y-6">
+                {/* Visual Icon with pulsing rings */}
+                <div className="inline-flex relative">
+                  {authResult.success ? (
+                    <>
+                      <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-md animate-pulse" />
+                      <div className="relative p-4 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                        <CheckCircle2 className="w-8 h-8" />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 rounded-full bg-rose-500/20 blur-md animate-pulse" />
+                      <div className="relative p-4 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                        <AlertTriangle className="w-8 h-8" />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Text Description */}
+                <div className="space-y-2">
+                  <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                    {authResult.title}
+                  </h3>
+                  <p className="text-xs md:text-sm text-slate-400 leading-relaxed px-2">
+                    {authResult.message}
+                  </p>
+                </div>
+
+                {/* Primary CTA Action */}
+                {authResult.success ? (
+                  <button
+                    onClick={() => {
+                      setAuthResult(null);
+                      setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-200"
+                  >
+                    Войти в личный кабинет
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setAuthResult(null);
+                      setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'register' }));
+                    }}
+                    className="w-full py-3.5 bg-[#ef4444] hover:bg-[#dc2626] text-white font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all duration-200"
+                  >
+                    Попробовать ещё раз
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
