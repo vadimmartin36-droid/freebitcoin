@@ -20,9 +20,80 @@ import {
   Coins,
   ArrowUpRight,
   TrendingDown,
-  Info
+  Info,
+  User,
+  Lock,
+  Mail,
+  Key,
+  LogOut,
+  Settings,
+  HelpCircle,
+  Wallet,
+  Percent,
+  Bot,
+  Copy,
+  Check,
+  RotateCcw,
+  Sparkles,
+  Calculator,
+  Bell,
+  Play,
+  Square,
+  AlertTriangle,
+  Activity,
+  ChevronRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Premium Theme Options for Personal Cabinet
+const themeStyles = {
+  gold: {
+    accent: 'text-[#ffd200]',
+    accentBg: 'bg-[#ffd200]',
+    accentBorder: 'border-[#ffd200]/30',
+    accentText: 'text-[#ffd200]',
+    accentButton: 'from-orange-500 to-yellow-400 text-slate-950 hover:shadow-[0_0_20px_rgba(255,210,0,0.3)]',
+    glow: 'rgba(255, 210, 0, 0.15)',
+    bg: 'bg-[#03040b]',
+    gradient: 'radial-gradient(circle at 50% 0%, #1a1202 0%, #03040b 70%, #010105 100%)',
+    badge: 'bg-[#ffd200]/10 text-[#ffd200] border-[#ffd200]/20'
+  },
+  cyan: {
+    accent: 'text-[#00d4ff]',
+    accentBg: 'bg-[#00d4ff]',
+    accentBorder: 'border-[#00d4ff]/30',
+    accentText: 'text-[#00d4ff]',
+    accentButton: 'from-cyan-500 to-blue-500 text-slate-950 hover:shadow-[0_0_20px_rgba(0,212,255,0.3)]',
+    glow: 'rgba(0, 212, 255, 0.15)',
+    bg: 'bg-[#01060f]',
+    gradient: 'radial-gradient(circle at 50% 0%, #021a24 0%, #01060f 70%, #000205 100%)',
+    badge: 'bg-[#00d4ff]/10 text-[#00d4ff] border-[#00d4ff]/20'
+  },
+  purple: {
+    accent: 'text-[#c084fc]',
+    accentBg: 'bg-[#c084fc]',
+    accentBorder: 'border-[#c084fc]/30',
+    accentText: 'text-[#c084fc]',
+    accentButton: 'from-purple-600 to-pink-500 text-white hover:shadow-[0_0_20px_rgba(192,132,252,0.3)]',
+    glow: 'rgba(192, 132, 252, 0.15)',
+    bg: 'bg-[#05010a]',
+    gradient: 'radial-gradient(circle at 50% 0%, #1a0129 0%, #05010a 70%, #020005 100%)',
+    badge: 'bg-[#c084fc]/10 text-[#c084fc] border-[#c084fc]/20'
+  },
+  emerald: {
+    accent: 'text-[#10b981]',
+    accentBg: 'bg-[#10b981]',
+    accentBorder: 'border-[#10b981]/30',
+    accentText: 'text-[#10b981]',
+    accentButton: 'from-emerald-500 to-teal-400 text-slate-950 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]',
+    glow: 'rgba(16, 185, 129, 0.15)',
+    bg: 'bg-[#010804]',
+    gradient: 'radial-gradient(circle at 50% 0%, #022410 0%, #010804 70%, #000401 100%)',
+    badge: 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20'
+  }
+};
 
 // Referral link
 const REF_LINK = 'https://freebitco.in/?r=264521';
@@ -74,22 +145,577 @@ export default function Home() {
   const [btcTrend, setBtcTrend] = React.useState< 'up' | 'down' >('up');
   const [totalPaidOut, setTotalPaidOut] = React.useState(2514892410);
 
+  // --- AUTHENTICATION & CABINET STATE ---
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = React.useState(false);
+  const [dashboardTheme, setDashboardTheme] = React.useState<'gold' | 'cyan' | 'purple' | 'emerald'>('gold');
+  const [activeDashboardTab, setActiveDashboardTab] = React.useState<'overview' | 'faucet' | 'multiply' | 'referrals' | 'calculator' | 'settings'>('overview');
+  
+  const [currentUser, setCurrentUser] = React.useState<{
+    email: string;
+    name: string;
+    avatar: string;
+    wallet: string;
+    refId: string;
+    refShare: number;
+    balance: number;
+    cumulativeClaims: number;
+    rollsCount: number;
+    loyaltyPoints: number;
+    tier: string;
+    twoFactorEnabled: boolean;
+  } | null>(null);
+
+  const [authModal, setAuthModal] = React.useState({
+    isOpen: false,
+    mode: 'login' as 'login' | 'register' | 'forgot',
+    email: '',
+    password: '',
+    name: '',
+    confirmPassword: '',
+    showPassword: false,
+    errorSimulated: false
+  });
+
+  const [authResult, setAuthResult] = React.useState<{
+    isOpen: boolean;
+    success: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
+
+  // --- FREE ROLL CRAN SIMULATOR ---
+  const [rollStatus, setRollStatus] = React.useState({
+    isRolling: false,
+    rolledDigits: ['0', '0', '0', '0', '0'],
+    finalNumber: null as number | null,
+    winAmount: null as number | null,
+    cooldownSeconds: 0
+  });
+
+  // --- MULTIPLY BTC (HI-LO) GAME STATE ---
+  const [multiplyBet, setMultiplyBet] = React.useState(10);
+  const [multiplyResult, setMultiplyResult] = React.useState<{
+    rolled: number | null;
+    won: boolean | null;
+    change: number | null;
+    isHigh: boolean | null;
+  }>({ rolled: null, won: null, change: null, isHigh: null });
+  const [multiplyHistory, setMultiplyHistory] = React.useState<Array<{
+    id: number;
+    rolled: number;
+    bet: number;
+    isHigh: boolean;
+    won: boolean;
+  }>>([]);
+
+  // --- MARTINGALE BOT AUTOMATION ---
+  const [isBotRunning, setIsBotRunning] = React.useState(false);
+  const [botConfig, setBotConfig] = React.useState({
+    baseBet: 10,
+    multiplier: 2,
+    actionOnLoss: 'double' as 'double' | 'reset',
+    actionOnWin: 'reset' as 'reset' | 'double',
+    maxLossSteps: 8
+  });
+  const [botStats, setBotStats] = React.useState({
+    wins: 0,
+    losses: 0,
+    profit: 0,
+    currentLossStreak: 0,
+    maxLossStreak: 0
+  });
+
+  // --- REFERRAL INTERACTIVE TICKER ---
+  const [referralList, setReferralList] = React.useState([
+    { id: 101, name: 'Satoshi_Miner', avatar: 'https://picsum.photos/seed/sat/80/80', status: 'online', claimed: 1420, date: '2026-07-10' },
+    { id: 102, name: 'CryptoQueen', avatar: 'https://picsum.photos/seed/que/80/80', status: 'online', claimed: 2850, date: '2026-07-12' },
+    { id: 103, name: 'BtcBull_99', avatar: 'https://picsum.photos/seed/bul/80/80', status: 'offline', claimed: 950, date: '2026-07-15' },
+    { id: 104, name: 'HodlGod', avatar: 'https://picsum.photos/seed/god/80/80', status: 'online', claimed: 410, date: '2026-07-20' }
+  ]);
+  const [recentNotifications, setRecentNotifications] = React.useState<Array<{ id: number; text: string; time: string }>>([]);
+
+  // --- CALCULATOR STATE ---
+  const [calcSatoshi, setCalcSatoshi] = React.useState('10000');
+  const [calcBtc, setCalcBtc] = React.useState('0.00010000');
+  const [calcUsd, setCalcUsd] = React.useState('5.84');
+
+  // --- REFS FOR AUTO-BOT RUNNING ---
+  const multiplyBetRef = React.useRef(multiplyBet);
+  const isBotRunningRef = React.useRef(isBotRunning);
+  const currentUserRef = React.useRef(currentUser);
+
   React.useEffect(() => {
-    // Tick price slightly
+    multiplyBetRef.current = multiplyBet;
+    isBotRunningRef.current = isBotRunning;
+    currentUserRef.current = currentUser;
+  }, [multiplyBet, isBotRunning, currentUser]);
+
+  // Initial user seeding & session restoration
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const existingAccounts = localStorage.getItem('freebitco_accounts');
+      if (!existingAccounts) {
+        const defaultAccounts = [
+          {
+            email: 'demo@freebitco.io',
+            password: 'demo123',
+            name: 'Крипто Бро',
+            avatar: 'https://picsum.photos/seed/avatar1/100/100',
+            wallet: 'bc1qxy2kg3ut7v6396t88372864839201019183',
+            refId: 'demo999',
+            refShare: 25,
+            balance: 15420, // Satoshis
+            cumulativeClaims: 4,
+            rollsCount: 4,
+            loyaltyPoints: 120,
+            tier: 'Bronze',
+            twoFactorEnabled: false
+          }
+        ];
+        localStorage.setItem('freebitco_accounts', JSON.stringify(defaultAccounts));
+      }
+
+      // Restore session
+      const session = localStorage.getItem('freebitco_session');
+      if (session) {
+        const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+        const user = accounts.find((a: any) => a.email === session);
+        if (user) {
+          setTimeout(() => {
+            setCurrentUser(user);
+            setIsLoggedIn(true);
+          }, 0);
+        }
+      }
+    }
+  }, []);
+
+  // Sync current user modifications to localStorage
+  const syncUserToStorage = (updatedUser: any) => {
+    if (typeof window === 'undefined' || !updatedUser) return;
+    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+    const index = accounts.findIndex((a: any) => a.email === updatedUser.email);
+    if (index !== -1) {
+      accounts[index] = updatedUser;
+    } else {
+      accounts.push(updatedUser);
+    }
+    localStorage.setItem('freebitco_accounts', JSON.stringify(accounts));
+    setCurrentUser(updatedUser);
+  };
+
+  // Cooldown timer ticker for faucet claim
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (rollStatus.cooldownSeconds > 0) {
+      interval = setInterval(() => {
+        setRollStatus(prev => ({
+          ...prev,
+          cooldownSeconds: prev.cooldownSeconds - 1
+        }));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [rollStatus.cooldownSeconds]);
+
+  // Live price simulator
+  React.useEffect(() => {
     const interval = setInterval(() => {
-      const changePercent = (Math.random() - 0.49) * 0.05; // biased positive slightly
+      const changePercent = (Math.random() - 0.49) * 0.05;
       const change = btcPrice * (changePercent / 100);
       setBtcPrice(prev => {
         const next = prev + change;
         setBtcTrend(change >= 0 ? 'up' : 'down');
         return next;
       });
-      // Increase payout counter slightly to simulate live payouts
       setTotalPaidOut(prev => prev + Math.floor(Math.random() * 50) + 15);
     }, 4000);
 
     return () => clearInterval(interval);
   }, [btcPrice]);
+
+  // Live Earning simulator representing active referrals rolling & passive mining
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isLoggedIn && currentUser) {
+      interval = setInterval(() => {
+        // Randomly simulate a referral claim or automatic minor stake mining increment
+        const rand = Math.random();
+        if (rand < 0.15) {
+          // Referral collects the faucet
+          const simulatedUser = referralList[Math.floor(Math.random() * referralList.length)];
+          const bonusAmt = 7.5; // 50% commission on simulated 15 satoshi win
+          
+          setRecentNotifications(prev => [
+            {
+              id: Date.now(),
+              text: `Реферал @${simulatedUser.name} собрал кран: +15 SAT (вам начислено +${bonusAmt} SAT)`,
+              time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            },
+            ...prev.slice(0, 4)
+          ]);
+
+          // Update user balance
+          const updated = {
+            ...currentUserRef.current!,
+            balance: currentUserRef.current!.balance + bonusAmt
+          };
+          syncUserToStorage(updated);
+        } else if (rand < 0.45) {
+          // Passive mining yield (+1 satoshi)
+          const updated = {
+            ...currentUserRef.current!,
+            balance: currentUserRef.current!.balance + 1
+          };
+          syncUserToStorage(updated);
+        }
+      }, 4000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoggedIn, referralList]);
+
+  // Two-way calculator synchronization
+  React.useEffect(() => {
+    const sat = parseFloat(calcSatoshi);
+    if (!isNaN(sat)) {
+      const btc = sat / 100000000;
+      setTimeout(() => {
+        setCalcBtc(btc.toFixed(8));
+        setCalcUsd((btc * btcPrice).toFixed(2));
+      }, 0);
+    }
+  }, [calcSatoshi, btcPrice]);
+
+  // --- ACTIONS & HANDLERS ---
+  const handleOpenAuth = (mode: 'login' | 'register' | 'forgot') => {
+    setAuthModal(prev => ({
+      ...prev,
+      isOpen: true,
+      mode,
+      email: '',
+      password: '',
+      confirmPassword: '',
+      name: '',
+      errorSimulated: false
+    }));
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+    const user = accounts.find((a: any) => a.email.toLowerCase() === authModal.email.toLowerCase() && a.password === authModal.password);
+
+    if (user) {
+      localStorage.setItem('freebitco_session', user.email);
+      setCurrentUser(user);
+      setIsLoggedIn(true);
+      setAuthModal(prev => ({ ...prev, isOpen: false }));
+      setIsDashboardOpen(true);
+    } else {
+      alert('Неверный адрес электронной почты или пароль. Попробуйте еще раз или войдите через Демо-профиль.');
+    }
+  };
+
+  const handleDemoLogin = () => {
+    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+    const demoUser = accounts.find((a: any) => a.email === 'demo@freebitco.io');
+    if (demoUser) {
+      localStorage.setItem('freebitco_session', demoUser.email);
+      setCurrentUser(demoUser);
+      setIsLoggedIn(true);
+      setAuthModal(prev => ({ ...prev, isOpen: false }));
+      setIsDashboardOpen(true);
+    }
+  };
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authModal.email || !authModal.password || !authModal.name) {
+      alert('Пожалуйста, заполните все обязательные поля.');
+      return;
+    }
+    if (authModal.password !== authModal.confirmPassword) {
+      alert('Пароли не совпадают.');
+      return;
+    }
+
+    setAuthModal(prev => ({ ...prev, isOpen: false }));
+
+    // Show beautiful success/failure result popup as requested
+    if (authModal.errorSimulated) {
+      setAuthResult({
+        isOpen: true,
+        success: false,
+        title: 'Ошибка регистрации',
+        message: 'Этот адрес электронной почты уже занят или сессия партнера истекла. Пожалуйста, отключите симуляцию ошибки и попробуйте снова.'
+      });
+    } else {
+      const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+      const exists = accounts.find((a: any) => a.email.toLowerCase() === authModal.email.toLowerCase());
+      if (exists) {
+        setAuthResult({
+          isOpen: true,
+          success: false,
+          title: 'Email уже занят',
+          message: 'Этот адрес электронной почты уже используется в системе. Попробуйте другой Email или войдите под текущим.'
+        });
+        return;
+      }
+
+      const newUser = {
+        email: authModal.email,
+        password: authModal.password,
+        name: authModal.name,
+        avatar: 'https://picsum.photos/seed/' + Math.floor(Math.random() * 100) + '/100/100',
+        wallet: 'bc1q' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+        refId: Math.floor(100000 + Math.random() * 900000).toString(),
+        refShare: 0,
+        balance: 1000, // 1000 free signup satoshi bonus!
+        cumulativeClaims: 0,
+        rollsCount: 0,
+        loyaltyPoints: 0,
+        tier: 'Bronze',
+        twoFactorEnabled: false
+      };
+
+      accounts.push(newUser);
+      localStorage.setItem('freebitco_accounts', JSON.stringify(accounts));
+
+      setAuthResult({
+        isOpen: true,
+        success: true,
+        title: 'Успешная регистрация! 🎉',
+        message: `Поздравляем, ${authModal.name}! Ваша учетная запись успешно создана. Вам начислено 1000 приветственных сатоши! Теперь вы можете войти в личный кабинет.`
+      });
+    }
+  };
+
+  const handleForgotPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authModal.email) {
+      alert('Пожалуйста, введите корректный email.');
+      return;
+    }
+    alert(`Ссылка для сброса пароля успешно отправлена на ${authModal.email}! Проверьте ваш почтовый ящик.`);
+    setAuthModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('freebitco_session');
+    setIsLoggedIn(false);
+    setIsDashboardOpen(false);
+    setCurrentUser(null);
+    setIsBotRunning(false);
+  };
+
+  // --- FAUCET FREE BTC ROLLER ---
+  const triggerFreeRoll = () => {
+    if (!currentUser || rollStatus.isRolling || rollStatus.cooldownSeconds > 0) return;
+    
+    setRollStatus(prev => ({ ...prev, isRolling: true, finalNumber: null, winAmount: null }));
+    
+    // Slot rolling effect
+    let tickCount = 0;
+    const tickInterval = setInterval(() => {
+      setRollStatus(prev => ({
+        ...prev,
+        rolledDigits: Array.from({ length: 5 }, () => Math.floor(Math.random() * 10).toString())
+      }));
+      tickCount++;
+      if (tickCount > 15) {
+        clearInterval(tickInterval);
+        
+        // Final Roll selection
+        const finalNum = Math.floor(Math.random() * 10001);
+        let reward = 15;
+        if (finalNum === 10000) reward = 1500000;
+        else if (finalNum >= 9998) reward = 150000;
+        else if (finalNum >= 9994) reward = 15000;
+        else if (finalNum >= 9986) reward = 1500;
+        else if (finalNum >= 9886) reward = 150;
+
+        const claims = currentUser.cumulativeClaims + 1;
+        let loyalty = currentUser.loyaltyPoints + 2;
+        let calculatedTier = 'Bronze';
+        if (claims > 50) calculatedTier = 'Platinum';
+        else if (claims > 25) calculatedTier = 'Gold';
+        else if (claims > 10) calculatedTier = 'Silver';
+
+        // Update balance
+        const updatedUser = {
+          ...currentUser,
+          balance: currentUser.balance + reward,
+          cumulativeClaims: claims,
+          rollsCount: currentUser.rollsCount + 1,
+          loyaltyPoints: loyalty,
+          tier: calculatedTier
+        };
+
+        setRollStatus(prev => ({
+          ...prev,
+          isRolling: false,
+          rolledDigits: finalNum.toString().padStart(5, '0').split(''),
+          finalNumber: finalNum,
+          winAmount: reward,
+          cooldownSeconds: 3600 // 1 hour
+        }));
+
+        syncUserToStorage(updatedUser);
+      }
+    }, 80);
+  };
+
+  // --- HI-LO MULTIPLIER GAME LOGIC ---
+  const playHiLo = (betOnHigh: boolean) => {
+    if (!currentUser) return;
+    if (multiplyBet > currentUser.balance) {
+      alert('Недостаточно баланса для этой ставки.');
+      setIsBotRunning(false);
+      return;
+    }
+
+    const rolled = Math.floor(Math.random() * 10000);
+    let won = false;
+
+    if (betOnHigh) {
+      won = rolled > 5250;
+    } else {
+      won = rolled < 4750;
+    }
+
+    const change = won ? multiplyBet : -multiplyBet;
+    const updatedUser = {
+      ...currentUser,
+      balance: currentUser.balance + change
+    };
+
+    const record = {
+      id: Date.now() + Math.random(),
+      rolled,
+      bet: multiplyBet,
+      isHigh: betOnHigh,
+      won
+    };
+
+    setMultiplyResult({ rolled, won, change, isHigh: betOnHigh });
+    setMultiplyHistory(prev => [record, ...prev.slice(0, 9)]);
+    syncUserToStorage(updatedUser);
+
+    // Update stats for bot if bot is running
+    if (isBotRunningRef.current) {
+      setBotStats(prev => {
+        const nextLossStreak = won ? 0 : prev.currentLossStreak + 1;
+        return {
+          wins: prev.wins + (won ? 1 : 0),
+          losses: prev.losses + (won ? 0 : 1),
+          profit: prev.profit + change,
+          currentLossStreak: nextLossStreak,
+          maxLossStreak: Math.max(prev.maxLossStreak, nextLossStreak)
+        };
+      });
+    }
+  };
+
+  // Automated Martingale Bot implementation
+  const runMartingaleTick = () => {
+    const user = currentUserRef.current;
+    if (!user || !isBotRunningRef.current) return;
+
+    const currentBet = multiplyBetRef.current;
+    if (currentBet > user.balance) {
+      setIsBotRunning(false);
+      alert('Авто-бот остановлен: превышен доступный баланс.');
+      return;
+    }
+
+    // Play random HI/LO choice for bot activity
+    const botChoiceHigh = Math.random() > 0.5;
+    
+    // Simulate game
+    const rolled = Math.floor(Math.random() * 10000);
+    const won = botChoiceHigh ? rolled > 5250 : rolled < 4750;
+    const change = won ? currentBet : -currentBet;
+
+    // Record game
+    const record = {
+      id: Date.now() + Math.random(),
+      rolled,
+      bet: currentBet,
+      isHigh: botChoiceHigh,
+      won
+    };
+
+    setMultiplyResult({ rolled, won, change, isHigh: botChoiceHigh });
+    setMultiplyHistory(prev => [record, ...prev.slice(0, 9)]);
+
+    const updatedUser = {
+      ...user,
+      balance: user.balance + change
+    };
+    syncUserToStorage(updatedUser);
+
+    // Martingale betting strategy application
+    if (won) {
+      // Reset bet on win
+      setMultiplyBet(botConfig.baseBet);
+      setBotStats(prev => ({
+        wins: prev.wins + 1,
+        losses: prev.losses,
+        profit: prev.profit + change,
+        currentLossStreak: 0,
+        maxLossStreak: prev.maxLossStreak
+      }));
+    } else {
+      // Double on loss (Martingale)
+      const nextBet = currentBet * botConfig.multiplier;
+      setMultiplyBet(nextBet);
+      setBotStats(prev => {
+        const nextLossStreak = prev.currentLossStreak + 1;
+        return {
+          wins: prev.wins,
+          losses: prev.losses + 1,
+          profit: prev.profit + change,
+          currentLossStreak: nextLossStreak,
+          maxLossStreak: Math.max(prev.maxLossStreak, nextLossStreak)
+        };
+      });
+    }
+  };
+
+  // Bot process orchestrator
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isBotRunning && isLoggedIn && currentUser) {
+      timer = setInterval(() => {
+        runMartingaleTick();
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isBotRunning]);
+
+  const toggleBot = () => {
+    if (!isBotRunning) {
+      setBotStats({ wins: 0, losses: 0, profit: 0, currentLossStreak: 0, maxLossStreak: 0 });
+      setMultiplyBet(botConfig.baseBet);
+    }
+    setIsBotRunning(!isBotRunning);
+  };
+
+  // --- SETTINGS DISPATCH ---
+  const handleUpdateProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    
+    // Toast update feedback
+    alert('Профиль и настройки успешно обновлены!');
+  };
 
   const faqs = [
     {
@@ -179,6 +805,1052 @@ export default function Home() {
     }
   ];
 
+  const dynamicRefLink = currentUser ? `https://freebitco.in/?r=${currentUser.refId}` : REF_LINK;
+
+  // Active theme helper
+  const theme = themeStyles[dashboardTheme];
+
+  if (isDashboardOpen && isLoggedIn && currentUser) {
+    return (
+      <div 
+        id="dashboard" 
+        className={cn("min-h-screen text-slate-100 flex flex-col md:flex-row relative overflow-hidden transition-all duration-500", theme.bg)} 
+        style={{ 
+          lineHeight: '23px',
+          backgroundImage: theme.gradient
+        }}
+      >
+        {/* Animated Background Sparks */}
+        <div className="absolute inset-0 pointer-events-none z-0 opacity-10">
+          <div className="absolute top-[20%] left-[30%] w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping" />
+          <div className="absolute top-[60%] left-[70%] w-1 h-1 rounded-full bg-cyan-400 animate-ping" />
+        </div>
+
+        {/* 1. SIDEBAR NAVIGATION (Desktop) */}
+        <aside className="w-full md:w-80 shrink-0 bg-[#070816]/95 border-b md:border-b-0 md:border-r border-white/5 relative z-20 flex flex-col justify-between p-6">
+          <div>
+            {/* Header / Brand */}
+            <div className="flex items-center gap-2.5 pb-6 border-b border-white/5 mb-6" style={{ fontFamily: 'Courier New' }}>
+              <div className="w-8 h-8 bg-gradient-to-tr from-orange-500 to-yellow-400 rounded-lg flex items-center justify-center font-bold text-slate-900 shadow-[0_0_15px_rgba(247,151,30,0.3)]">
+                ₿
+              </div>
+              <div>
+                <span className="font-['Poppins'] font-bold text-lg text-white">Freebitco<span className="text-orange-400">Cabinet</span></span>
+                <span className="block text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Личный кабинет
+                </span>
+              </div>
+            </div>
+
+            {/* Compact Profile Summary */}
+            <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 mb-6 flex items-center gap-3">
+              <div className="relative">
+                <img src={currentUser.avatar} alt="Avatar" className="w-10 h-10 rounded-xl border border-white/10 object-cover" />
+                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#070816] rounded-full" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                  {currentUser.name}
+                  <span className="text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.2 rounded-md">
+                    {currentUser.tier}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono truncate">{currentUser.email}</div>
+              </div>
+            </div>
+
+            {/* Balance Ticker Card */}
+            <div className="p-4 bg-gradient-to-br from-white/[0.04] to-transparent rounded-2xl border border-white/5 mb-8">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                <span>ТЕКУЩИЙ БАЛАНС</span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#ffd200] animate-ping" />
+              </div>
+              <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
+                <span className="text-orange-400">₿</span>
+                <span>{(currentUser.balance / 100000000).toFixed(8)}</span>
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-[#80809a] mt-1 font-mono">
+                <span>{currentUser.balance.toLocaleString('en-US')} SAT</span>
+                <span className="text-emerald-400 font-semibold">≈ ${(currentUser.balance / 100000000 * btcPrice).toFixed(2)} USD</span>
+              </div>
+            </div>
+
+            {/* Menu Items */}
+            <nav className="space-y-1.5">
+              <button
+                onClick={() => { setIsBotRunning(false); setActiveDashboardTab('overview'); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'overview' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <Activity className="w-4 h-4" />
+                <span>Панель управления</span>
+              </button>
+              <button
+                onClick={() => { setIsBotRunning(false); setActiveDashboardTab('faucet'); }}
+                className={cn(
+                  "w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'faucet' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <span className="flex items-center gap-3">
+                  <Coins className="w-4 h-4 text-orange-400" />
+                  <span>Кран FREE BTC</span>
+                </span>
+                {rollStatus.cooldownSeconds === 0 && (
+                  <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                )}
+              </button>
+              <button
+                onClick={() => { setActiveDashboardTab('multiply'); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'multiply' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <TrendingUp className="w-4 h-4 text-cyan-400" />
+                <span>Умножитель MULTIPLY</span>
+              </button>
+              <button
+                onClick={() => { setIsBotRunning(false); setActiveDashboardTab('referrals'); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'referrals' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <Users className="w-4 h-4 text-[#ffd200]" />
+                <span>Рефералы & Ссылки</span>
+              </button>
+              <button
+                onClick={() => { setIsBotRunning(false); setActiveDashboardTab('calculator'); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'calculator' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <Calculator className="w-4 h-4 text-emerald-400" />
+                <span>Конвертер сатоши</span>
+              </button>
+              <button
+                onClick={() => { setIsBotRunning(false); setActiveDashboardTab('settings'); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'settings' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <Settings className="w-4 h-4 text-purple-400" />
+                <span>Настройки кабинета</span>
+              </button>
+            </nav>
+          </div>
+
+          {/* Sidebar Footer Controls */}
+          <div className="pt-6 border-t border-white/5 space-y-3">
+            <button
+              onClick={() => setIsDashboardOpen(false)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs text-white font-bold transition-all"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              Вернуться на лендинг
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-bold transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+              Выйти из аккаунта
+            </button>
+          </div>
+        </aside>
+
+        {/* 2. MAIN CABINET AREA */}
+        <main className="flex-1 overflow-y-auto relative z-10 flex flex-col min-h-screen">
+          {/* Dashboard Sticky Top Bar */}
+          <header className="sticky top-0 z-20 bg-[#070816]/70 backdrop-blur-md border-b border-white/5 px-6 md:px-12 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-sm font-bold text-white capitalize md:text-lg">
+                {activeDashboardTab === 'overview' && '📊 Моя аналитика'}
+                {activeDashboardTab === 'faucet' && '🎲 Кран FREE BTC'}
+                {activeDashboardTab === 'multiply' && '📈 Игра HI-LO Multiplier'}
+                {activeDashboardTab === 'referrals' && '🤝 Партнерский центр'}
+                {activeDashboardTab === 'calculator' && '🧮 Криптокалькулятор'}
+                {activeDashboardTab === 'settings' && '⚙️ Настройки и Безопасность'}
+              </h1>
+            </div>
+
+            {/* Quick stats on Header */}
+            <div className="flex items-center gap-4">
+              {/* BTC Ticker widget */}
+              <div className="hidden lg:flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs">
+                <span className="font-bold text-slate-400">BTC/USD:</span>
+                <span className="font-mono font-bold text-white">${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span className={cn("text-[10px] font-mono", btcTrend === 'up' ? 'text-emerald-400' : 'text-rose-400')}>
+                  {btcTrend === 'up' ? '▲' : '▼'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#ffd200]/10 border border-[#ffd200]/20 rounded-xl px-3 py-1 text-xs text-[#ffd200] font-bold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{currentUser.loyaltyPoints} RP</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Dynamic Content Panel */}
+          <div className="p-6 md:p-12 max-w-7xl w-full mx-auto space-y-8 flex-1">
+            
+            {/* TAB 1: OVERVIEW */}
+            {activeDashboardTab === 'overview' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                {/* Welcome message with passive mining notification */}
+                <div className="bg-gradient-to-r from-orange-500/10 via-yellow-400/5 to-transparent border border-orange-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                  <div className="absolute -right-16 -bottom-16 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+                  <div className="max-w-xl relative z-10">
+                    <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2.5 py-1 rounded-full font-black uppercase tracking-widest mb-3 inline-block">
+                      🔥 Активный аккаунт
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-2" style={{ fontFamily: 'Georgia' }}>
+                      Добро пожаловать, {currentUser.name}!
+                    </h2>
+                    <p className="text-xs md:text-sm text-slate-400 leading-relaxed mb-4">
+                      Рады видеть вас! На вашей панели работает симулятор автоматического майнинга сатоши. Пока открыт этот личный кабинет, баланс плавно увеличивается за счет лояльности рефералов и внутренней стейкинг-системы.
+                    </p>
+                    <div className="flex flex-wrap gap-4 text-xs font-bold text-emerald-400 bg-emerald-400/5 border border-emerald-500/10 px-4 py-2.5 rounded-xl inline-flex">
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        Стейкинг-майнер запущен (+1 SAT в секунды)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Stat A */}
+                  <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Всего сатоши</div>
+                    <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
+                      <span className="text-orange-400">₿</span>
+                      <span>{currentUser.balance.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">До вывода: {Math.max(0, 100000 - currentUser.balance).toLocaleString('en-US')} SAT</div>
+                  </div>
+
+                  {/* Stat B */}
+                  <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Сборов с крана</div>
+                    <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
+                      <Coins className="w-5 h-5 text-[#ffd200]" />
+                      <span>{currentUser.cumulativeClaims}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">Следующий уровень: {10 - (currentUser.cumulativeClaims % 10)} сборов</div>
+                  </div>
+
+                  {/* Stat C */}
+                  <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Награда рефералов</div>
+                    <div className="font-display font-black text-2xl text-[#ffd200] tracking-tight flex items-baseline gap-1.5">
+                      <Users className="w-5 h-5" />
+                      <span>50%</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">Пассивный доход от ROLL сборов друзей</div>
+                  </div>
+
+                  {/* Stat D */}
+                  <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Лояльность (RP)</div>
+                    <div className="font-display font-black text-2xl text-[#00d4ff] tracking-tight flex items-baseline gap-1.5">
+                      <Gift className="w-5 h-5" />
+                      <span>{currentUser.loyaltyPoints}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">Используйте RP для баффов на кран (+1000%)</div>
+                  </div>
+                </div>
+
+                {/* Live Feed and Tier Progression */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Live Activity Feed */}
+                  <div className="lg:col-span-2 p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Activity className="w-4 h-4 text-[#ffd200]" />
+                        Живой лог активности партнера
+                      </h3>
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-500/10 px-2.5 py-0.5 rounded-md animate-pulse">
+                        В эфире
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                      {recentNotifications.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-[#80809a] italic">
+                          Ожинение трансляции сборов... (новые начисления поступают каждые несколько секунд)
+                        </div>
+                      ) : (
+                        recentNotifications.map(n => (
+                          <div key={n.id} className="p-3 bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 rounded-xl flex items-center justify-between transition-all">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <p className="text-xs text-slate-300 truncate">{n.text}</p>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-3">{n.time}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tier status */}
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Уровень лояльности партнера
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-white">Статус: {currentUser.tier}</span>
+                        <span className="text-xs font-mono font-bold text-slate-400">Claims: {currentUser.cumulativeClaims}</span>
+                      </div>
+
+                      {/* Progression bar */}
+                      <div className="space-y-1.5">
+                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-orange-500 to-yellow-400" 
+                            style={{ width: `${Math.min(100, (currentUser.cumulativeClaims / 50) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                          <span>Bronze (0)</span>
+                          <span>Silver (10)</span>
+                          <span>Gold (25)</span>
+                          <span>Platinum (50)</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[11px] text-slate-400 leading-relaxed">
+                        <p className="font-bold text-white mb-1">🎁 Ваши привилегии:</p>
+                        🔹 Бонус к сборам крана: +{(currentUser.cumulativeClaims > 50 ? 50 : currentUser.cumulativeClaims > 25 ? 25 : currentUser.cumulativeClaims > 10 ? 10 : 0)}% сатоши!<br />
+                        🔹 Дополнительные билеты за каждый ROLL: +2 лотерейных билета.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 2: FREE BTC (FAUCET) */}
+            {activeDashboardTab === 'faucet' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* Rolling Slot machine and claims block */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl p-8 text-center space-y-8 relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
+                    
+                    <div>
+                      <h2 className="text-lg font-bold text-white" style={{ fontFamily: 'Georgia' }}>Ежечасный сбор бесплатных Биткоинов</h2>
+                      <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                        Нажмите кнопку ниже, чтобы запустить генератор счастливых чисел. Сумма начисления зависит от выпавшей комбинации!
+                      </p>
+                    </div>
+
+                    {/* SLOT REELS MACHINE */}
+                    <div className="flex justify-center items-center gap-3">
+                      {rollStatus.rolledDigits.map((digit, idx) => (
+                        <div 
+                          key={idx} 
+                          className={cn(
+                            "w-12 h-20 md:w-16 md:h-24 rounded-2xl bg-[#090b1c] border-2 flex items-center justify-center font-display font-black text-3xl md:text-5xl tracking-tight shadow-inner select-none transition-all duration-150",
+                            rollStatus.isRolling ? "border-[#ffd200]/40 text-orange-400 animate-pulse" : "border-white/10 text-white"
+                          )}
+                        >
+                          {digit}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ROLL BUTTON OR COOLDOWN */}
+                    <div className="flex flex-col items-center gap-3">
+                      {rollStatus.cooldownSeconds > 0 ? (
+                        <div className="space-y-2">
+                          <div className="text-slate-400 text-xs font-bold flex items-center justify-center gap-1.5">
+                            <Clock className="w-4 h-4 text-orange-400" />
+                            Следующий сбор доступен через:
+                          </div>
+                          <div className="font-mono text-2xl font-extrabold text-white bg-white/5 border border-white/10 px-6 py-2.5 rounded-2xl tracking-widest inline-block">
+                            {Math.floor(rollStatus.cooldownSeconds / 60).toString().padStart(2, '0')} : {(rollStatus.cooldownSeconds % 60).toString().padStart(2, '0')}
+                          </div>
+                          <div>
+                            <button
+                              onClick={() => setRollStatus(prev => ({ ...prev, cooldownSeconds: 0 }))}
+                              className="text-[10px] text-orange-400 underline hover:text-white transition-colors"
+                            >
+                              [Демо] Сбросить таймер кулдауна
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={triggerFreeRoll}
+                          disabled={rollStatus.isRolling}
+                          className={cn(
+                            "px-10 py-5 bg-gradient-to-r rounded-2xl text-slate-900 font-extrabold text-lg shadow-xl tracking-wide transition-all scale-100 active:scale-95 duration-200",
+                            rollStatus.isRolling ? "from-slate-700 to-slate-800 text-slate-400 cursor-not-allowed" : theme.accentButton
+                          )}
+                          style={{ fontFamily: 'Georgia' }}
+                        >
+                          {rollStatus.isRolling ? 'Генерация счастливого числа...' : '🎲 КЛИКНУТЬ ROLL'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ROLL RESULT ANNOUNCEMENT */}
+                    <AnimatePresence>
+                      {rollStatus.finalNumber !== null && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.95 }} 
+                          animate={{ opacity: 1, scale: 1 }} 
+                          exit={{ opacity: 0 }} 
+                          className="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center space-y-2"
+                        >
+                          <div className="text-xs text-emerald-400 font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4" /> Выигрыш начислен!
+                          </div>
+                          <div className="text-sm text-white font-medium">
+                            Счастливое число: <span className="font-mono font-bold text-[#ffd200]">{rollStatus.finalNumber}</span>
+                          </div>
+                          <div className="text-lg font-black text-white">
+                            Получено: <span className="text-emerald-400">+{rollStatus.winAmount} Сатоши</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Также начислено +2 бесплатных лотерейных билета и +2 RP балла</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                  </div>
+                </div>
+
+                {/* Reward Odds Table column */}
+                <div className="p-6 bg-[#070816]/80 border border-white/5 rounded-3xl space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">
+                    Таблица выигрышных чисел
+                  </h3>
+
+                  <div className="space-y-2 text-xs">
+                    {/* Header of table */}
+                    <div className="flex justify-between text-[#80809a] font-bold pb-1 text-[10px]">
+                      <span>Счастливое число</span>
+                      <span>Выплата сатоши</span>
+                    </div>
+
+                    {/* Rows */}
+                    {[
+                      { range: '0 - 9885', val: '15 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber <= 9885 },
+                      { range: '9886 - 9985', val: '150 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9886 && rollStatus.finalNumber <= 9985 },
+                      { range: '9986 - 9993', val: '1,500 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9986 && rollStatus.finalNumber <= 9993 },
+                      { range: '9994 - 9997', val: '15,000 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9994 && rollStatus.finalNumber <= 9997 },
+                      { range: '9998 - 9999', val: '150,000 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9998 && rollStatus.finalNumber <= 9999 },
+                      { range: '10000', val: '1,500,000 Satoshis', active: rollStatus.finalNumber === 10000 }
+                    ].map((row, idx) => (
+                      <div 
+                        key={idx} 
+                        className={cn(
+                          "flex justify-between items-center p-3.5 rounded-xl border transition-all",
+                          row.active ? "bg-[#ffd200]/10 border-[#ffd200] text-white font-bold" : "bg-white/[0.01] border-white/5 text-slate-300"
+                        )}
+                      >
+                        <span className="font-mono">{row.range}</span>
+                        <span className="font-mono text-emerald-400 font-semibold">{row.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 3: MULTIPLY BTC (HI-LO & BOT) */}
+            {activeDashboardTab === 'multiply' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                
+                {/* Description info */}
+                <div className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center gap-1.5">
+                      <TrendingUp className="w-5 h-5 text-cyan-400" />
+                      MULTIPLY BTC: Испытайте свою стратегию умножения ставок
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Делайте ставки на HIGH (число больше 5250) или LOW (число меньше 4750) для мгновенного удвоения ваших сатоши!
+                    </p>
+                  </div>
+                  <div className="p-3 bg-cyan-400/10 text-cyan-400 border border-cyan-400/20 rounded-2xl text-xs font-mono">
+                    Выиграйте 2x от ставки! (Мин 1 SAT)
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Manual Game Box */}
+                  <div className="lg:col-span-2 p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2 flex items-center gap-1">
+                      🕹️ Ручные ставки
+                    </h3>
+
+                    {/* Inputs */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[11px] text-slate-400 font-bold mb-1.5 uppercase">Размер ставки (SAT)</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="number" 
+                            value={multiplyBet}
+                            onChange={(e) => setMultiplyBet(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-400/50"
+                            disabled={isBotRunning}
+                          />
+                          <button 
+                            onClick={() => setMultiplyBet(Math.max(1, Math.floor(multiplyBet / 2)))}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-xs font-bold text-slate-300"
+                            disabled={isBotRunning}
+                          >
+                            /2
+                          </button>
+                          <button 
+                            onClick={() => setMultiplyBet(multiplyBet * 2)}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-xs font-bold text-slate-300"
+                            disabled={isBotRunning}
+                          >
+                            2x
+                          </button>
+                          <button 
+                            onClick={() => setMultiplyBet(1)}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-[10px] font-bold text-slate-300"
+                            disabled={isBotRunning}
+                          >
+                            MIN
+                          </button>
+                          <button 
+                            onClick={() => setMultiplyBet(currentUser.balance)}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-[10px] font-bold text-slate-300"
+                            disabled={isBotRunning}
+                          >
+                            MAX
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Manual betting buttons */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          onClick={() => playHiLo(true)}
+                          disabled={isBotRunning}
+                          className={cn(
+                            "py-4 bg-[#10b981] hover:bg-[#059669] text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1",
+                            isBotRunning && "opacity-50 cursor-not-allowed"
+                          )}
+                          style={{ fontFamily: 'Georgia' }}
+                        >
+                          <span>BET HIGH 📈</span>
+                          <span className="text-[9px] font-normal tracking-normal lowercase">(число &gt; 5250)</span>
+                        </button>
+                        <button
+                          onClick={() => playHiLo(false)}
+                          disabled={isBotRunning}
+                          className={cn(
+                            "py-4 bg-[#ef4444] hover:bg-[#dc2626] text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1",
+                            isBotRunning && "opacity-50 cursor-not-allowed"
+                          )}
+                          style={{ fontFamily: 'Georgia' }}
+                        >
+                          <span>BET LOW 📉</span>
+                          <span className="text-[9px] font-normal tracking-normal lowercase">(число &lt; 4750)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Result feedback */}
+                    <AnimatePresence mode="wait">
+                      {multiplyResult.rolled !== null && (
+                        <motion.div 
+                          key={multiplyResult.rolled}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0 }}
+                          className={cn(
+                            "p-4 rounded-2xl border text-center flex items-center justify-between px-6",
+                            multiplyResult.won ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                          )}
+                        >
+                          <div className="text-left">
+                            <span className="text-[10px] font-mono font-bold tracking-widest uppercase">
+                              Ставка: {multiplyResult.isHigh ? 'HIGH' : 'LOW'}
+                            </span>
+                            <div className="text-lg font-black text-white">
+                              Выпало число: <span className="font-mono text-[#ffd200]">{multiplyResult.rolled}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] uppercase block font-bold">результат</span>
+                            <span className="text-xl font-black">
+                              {multiplyResult.won ? `+${multiplyResult.change} SAT 🎉` : `${multiplyResult.change} SAT 😢`}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Martingale Auto Bot controls */}
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Bot className="w-4 h-4 text-cyan-400" />
+                        Авто-Бот Мартингейла
+                      </h3>
+                      {isBotRunning && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Configuration */}
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Базовая ставка (SAT)</label>
+                        <input 
+                          type="number" 
+                          value={botConfig.baseBet}
+                          onChange={(e) => setBotConfig(prev => ({ ...prev, baseBet: Math.max(1, parseInt(e.target.value) || 1) }))}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-400/50"
+                          disabled={isBotRunning}
+                        />
+                      </div>
+
+                      <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl space-y-2 text-[11px] text-slate-400 leading-relaxed">
+                        <p className="font-bold text-white flex items-center gap-1">
+                          <Info className="w-3.5 h-3.5 text-[#00d4ff]" /> Как работает бот:
+                        </p>
+                        Он делает случайные ставки. В случае <span className="text-rose-400 font-bold">проигрыша</span> он <span className="text-white font-bold">удваивает ставку</span>. В случае <span className="text-emerald-400 font-bold">выигрыша</span> он сбрасывает ставку до базовой.
+                      </div>
+
+                      {/* Bot Statistics */}
+                      {isBotRunning && (
+                        <div className="p-4 bg-[#090b1c] border border-white/10 rounded-xl space-y-2 font-mono text-xs">
+                          <div className="flex justify-between text-slate-400 font-bold border-b border-white/5 pb-1">
+                            <span>СТАТИСТИКА РОБОТА</span>
+                            <span className="text-emerald-400">АКТИВЕН</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Побед/Поражений:</span>
+                            <span>{botStats.wins} / {botStats.losses}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Профит бота:</span>
+                            <span className={cn(botStats.profit >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                              {botStats.profit >= 0 ? `+${botStats.profit}` : botStats.profit} SAT
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Макс. слив стрик:</span>
+                            <span className="text-red-400">{botStats.maxLossStreak}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Start / Stop */}
+                      <button
+                        onClick={toggleBot}
+                        className={cn(
+                          "w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl transition-all duration-150 flex items-center justify-center gap-2",
+                          isBotRunning ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-[#00d4ff] text-slate-900 hover:bg-[#00b5da]"
+                        )}
+                        style={{ fontFamily: 'Georgia' }}
+                      >
+                        {isBotRunning ? (
+                          <>
+                            <Square className="w-4 h-4 shrink-0 fill-current" />
+                            Остановить авто-бота
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 shrink-0 fill-current" />
+                            Запустить Мартингейла
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Multiply Game Logs Footer */}
+                {multiplyHistory.length > 0 && (
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">История ставок</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {multiplyHistory.map(h => (
+                        <div 
+                          key={h.id} 
+                          className={cn(
+                            "p-2.5 rounded-xl border text-center font-mono text-[10px]",
+                            h.won ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400" : "bg-rose-500/5 border-rose-500/20 text-rose-400"
+                          )}
+                        >
+                          <div className="font-bold">Roll: {h.rolled}</div>
+                          <div>{h.isHigh ? 'HIGH' : 'LOW'} | {h.won ? `+${h.bet}` : `-${h.bet}`}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* TAB 4: REFERRALS */}
+            {activeDashboardTab === 'referrals' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                
+                {/* QR and share links block */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                    <h3 className="text-base font-bold text-white flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
+                      <Users className="w-5 h-5 text-[#ffd200]" />
+                      Ваша реферальная конфигурация
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Вы можете указать ваш собственный партнерский ID от Freebitco.in. После его сохранения абсолютно все партнерские ссылки на этом лендинге обновятся, и вы сможете привлекать людей напрямую к вашей команде!
+                    </p>
+
+                    <div className="space-y-4">
+                      {/* ID config input */}
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">Ваш партнерский ID (Реферал ID)</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={currentUser.refId}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                              const updated = { ...currentUser, refId: val };
+                              syncUserToStorage(updated);
+                            }}
+                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#ffd200]/50"
+                            placeholder="Укажите ваш ID, например: 264521"
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(dynamicRefLink);
+                              alert('Уникальная партнерская ссылка успешно скопирована!');
+                            }}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 text-xs font-bold text-white inline-flex items-center gap-1.5 transition-colors"
+                          >
+                            <Copy className="w-4 h-4" /> Копировать ссылку
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Display of live generated URL */}
+                      <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-xl font-mono text-[10px] text-slate-300 break-all">
+                        <span className="font-bold text-[#ffd200]">Активная реф-ссылка сайта:</span> {dynamicRefLink}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR code representation */}
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl text-center flex flex-col items-center justify-center space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">QR-Код для листовки</h4>
+                    
+                    {/* Mock QR box representation */}
+                    <div className="p-3 bg-white rounded-2xl inline-block shadow-lg">
+                      <div className="w-32 h-32 bg-slate-900 rounded flex items-center justify-center text-3xl font-black text-white selection:bg-transparent">
+                        📱 QR
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-[#80809a] max-w-xs">
+                      Сканируя QR, партнеры мгновенно перейдут на этот информационный лендинг по вашей реферальной ссылке.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Team members list */}
+                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">
+                    Активные рефералы в вашей структуре
+                  </h3>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left text-slate-300">
+                      <thead className="text-[#80809a] font-bold uppercase text-[10px]">
+                        <tr>
+                          <th className="pb-3">Имя пользователя</th>
+                          <th className="pb-3 text-center">Статус</th>
+                          <th className="pb-3 text-right">Накоплено сатоши</th>
+                          <th className="pb-3 text-right text-[#ffd200]">Ваша доля (50%)</th>
+                          <th className="pb-3 text-right">Дата регистрации</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {referralList.map(ref => (
+                          <tr key={ref.id} className="hover:bg-white/[0.01] transition-colors">
+                            <td className="py-3 flex items-center gap-2">
+                              <img src={ref.avatar} alt="Avatar" className="w-6.5 h-6.5 rounded-md border border-white/10" />
+                              <span className="font-bold">{ref.name}</span>
+                            </td>
+                            <td className="py-3 text-center">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
+                                ref.status === 'online' ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"
+                              )}>
+                                {ref.status === 'online' ? 'В сети' : 'Неактивен'}
+                              </span>
+                            </td>
+                            <td className="py-3 text-right font-mono">{ref.claimed.toLocaleString('en-US')} SAT</td>
+                            <td className="py-3 text-right font-mono text-emerald-400 font-bold">{(ref.claimed * 0.5).toLocaleString('en-US')} SAT</td>
+                            <td className="py-3 text-right text-slate-400 font-mono">{ref.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 5: CALCULATOR */}
+            {activeDashboardTab === 'calculator' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Georgia' }}>Двунаправленный калькулятор конверсии</h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Введите любую сумму для автоматического пересчета в эквиваленты на основе текущего курса Биткоина!
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Satoshi input */}
+                  <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl space-y-1.5">
+                    <label className="text-[10px] text-slate-400 font-black uppercase">Сумма в Сатоши (SAT)</label>
+                    <input 
+                      type="text" 
+                      value={calcSatoshi}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setCalcSatoshi(val);
+                      }}
+                      className="w-full bg-transparent border-0 text-white text-xl font-mono font-bold focus:outline-none p-0 focus:ring-0"
+                    />
+                  </div>
+
+                  {/* BTC input */}
+                  <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl space-y-1.5">
+                    <label className="text-[10px] text-slate-400 font-black uppercase">Эквивалент в Биткоин (BTC)</label>
+                    <input 
+                      type="text" 
+                      value={calcBtc}
+                      onChange={(e) => {
+                        const btcStr = e.target.value.replace(/[^0-9.]/g, '');
+                        setCalcBtc(btcStr);
+                        const num = parseFloat(btcStr);
+                        if (!isNaN(num)) {
+                          setCalcSatoshi((num * 100000000).toFixed(0));
+                        }
+                      }}
+                      className="w-full bg-transparent border-0 text-white text-xl font-mono font-bold focus:outline-none p-0 focus:ring-0"
+                    />
+                  </div>
+
+                  {/* USD input */}
+                  <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl space-y-1.5">
+                    <label className="text-[10px] text-slate-400 font-black uppercase">Стоимость в Долларах США (USD)</label>
+                    <input 
+                      type="text" 
+                      value={calcUsd}
+                      onChange={(e) => {
+                        const usdStr = e.target.value.replace(/[^0-9.]/g, '');
+                        setCalcUsd(usdStr);
+                        const num = parseFloat(usdStr);
+                        if (!isNaN(num)) {
+                          const satVal = (num / btcPrice) * 100000000;
+                          setCalcSatoshi(satVal.toFixed(0));
+                        }
+                      }}
+                      className="w-full bg-transparent border-0 text-[#10b981] text-xl font-mono font-bold focus:outline-none p-0 focus:ring-0"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl text-[11px] text-slate-400 text-center leading-relaxed">
+                  💰 Расчет произведен на основе динамического симулированного курса <span className="text-white font-bold">${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })} за 1 BTC</span>.
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 6: SETTINGS */}
+            {activeDashboardTab === 'settings' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-8">
+                
+                {/* Form parameters */}
+                <form onSubmit={handleUpdateProfile} className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-2 flex items-center gap-2" style={{ fontFamily: 'Georgia' }}>
+                    <Settings className="w-5 h-5 text-purple-400" />
+                    Настройки партнерского аккаунта
+                  </h3>
+
+                  {/* Profile Name & Wallet info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Отображаемое имя (Никнейм)</label>
+                      <input 
+                        type="text" 
+                        value={currentUser.name}
+                        onChange={(e) => {
+                          const updated = { ...currentUser, name: e.target.value };
+                          syncUserToStorage(updated);
+                        }}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-purple-400/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Ваш Биткоин-адрес для выплат</label>
+                      <input 
+                        type="text" 
+                        value={currentUser.wallet}
+                        onChange={(e) => {
+                          const updated = { ...currentUser, wallet: e.target.value };
+                          syncUserToStorage(updated);
+                        }}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-purple-400/50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Avatar configuration */}
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-2 uppercase">Выберите аватар</label>
+                    <div className="flex flex-wrap gap-4">
+                      {[
+                        'https://picsum.photos/seed/avatar1/100/100',
+                        'https://picsum.photos/seed/avatar2/100/100',
+                        'https://picsum.photos/seed/avatar3/100/100',
+                        'https://picsum.photos/seed/avatar4/100/100',
+                        'https://picsum.photos/seed/avatar5/100/100',
+                        'https://picsum.photos/seed/avatar6/100/100'
+                      ].map((url, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...currentUser, avatar: url };
+                            syncUserToStorage(updated);
+                          }}
+                          className={cn(
+                            "w-14 h-14 rounded-xl overflow-hidden border-2 relative group transition-all",
+                            currentUser.avatar === url ? "border-purple-400 scale-105" : "border-white/10 hover:border-purple-400/40"
+                          )}
+                        >
+                          <img src={url} alt="Avatar Selection" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Referral share slider configuration */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase">Автоматический возврат комиссии (Shared Referral Cash-Back)</label>
+                      <span className="text-xs font-mono font-bold text-[#ffd200] bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-lg">
+                        {currentUser.refShare}%
+                      </span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      step="25"
+                      value={currentUser.refShare}
+                      onChange={(e) => {
+                        const updated = { ...currentUser, refShare: parseInt(e.target.value) };
+                        syncUserToStorage(updated);
+                      }}
+                      className="w-full accent-purple-500 bg-white/5 rounded-lg h-2 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Установите процент вашей реферальной комиссии, которым вы будете делиться со своей командой. Более высокий процент привлекает на 200% больше партнеров в вашу сеть!
+                    </p>
+                  </div>
+
+                  {/* Color theme settings */}
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-2 uppercase">Цветовая гамма кабинета</label>
+                    <div className="flex gap-3">
+                      {[
+                        { key: 'gold', name: 'Золотой Амбер', bg: 'bg-[#ffd200]' },
+                        { key: 'cyan', name: 'Кибер Синий', bg: 'bg-[#00d4ff]' },
+                        { key: 'purple', name: 'Королевский Пурпур', bg: 'bg-[#c084fc]' },
+                        { key: 'emerald', name: 'Изумрудный Кэш', bg: 'bg-[#10b981]' }
+                      ].map(t => (
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => setDashboardTheme(t.key as any)}
+                          className={cn(
+                            "px-3 py-2 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                            dashboardTheme === t.key ? "bg-white/5 border-white/20 text-white" : "bg-white/[0.01] border-white/5 text-slate-400 hover:text-white"
+                          )}
+                        >
+                          <span className={cn("w-2.5 h-2.5 rounded-full inline-block", t.bg)} />
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5 text-right">
+                    <button
+                      type="submit"
+                      className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-extrabold rounded-xl text-xs uppercase tracking-widest shadow-lg transition-all"
+                    >
+                      Сохранить настройки
+                    </button>
+                  </div>
+                </form>
+
+                {/* 2FA Security Simulator panel */}
+                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-rose-400" />
+                    Двухфакторная аутентификация (2FA)
+                  </h3>
+                  
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <p className="text-xs text-slate-400 max-w-lg">
+                      Защитите свой аккаунт с помощью Google Authenticator. При включении 2FA при входе в личный кабинет будет требоваться ввод случайного 6-значного токена.
+                    </p>
+                    <button
+                      onClick={() => {
+                        const updated = { ...currentUser, twoFactorEnabled: !currentUser.twoFactorEnabled };
+                        syncUserToStorage(updated);
+                        alert(updated.twoFactorEnabled ? '2FA Успешно симулирован и активирован на вашем аккаунте!' : '2FA Успешно деактивирован.');
+                      }}
+                      className={cn(
+                        "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wide transition-all",
+                        currentUser.twoFactorEnabled ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                      )}
+                    >
+                      {currentUser.twoFactorEnabled ? 'Активировано (Выключить)' : 'Деактивировано (Включить)'}
+                    </button>
+                  </div>
+                </div>
+
+              </motion.div>
+            )}
+
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div id="home" className="relative min-h-screen overflow-hidden text-slate-100 selection:bg-[#f7971e]/30 selection:text-[#ffd200]" style={{ backgroundColor: '#03040b', backgroundImage: 'radial-gradient(circle at 50% 0%, #0e0e26 0%, #03040b 70%, #010105 100%)', lineHeight: '23px', paddingLeft: '0px', marginLeft: '0px', marginBottom: '0px', marginTop: '99px' }}>
       
@@ -227,14 +1899,12 @@ export default function Home() {
           <span className="text-xs font-bold text-orange-400 uppercase tracking-widest bg-orange-500/20 px-2 py-0.5 rounded-md">🔥 Бонус</span>
           <span>+1000 Сатоши при регистрации сегодня!</span>
         </span>
-        <a 
-          href={REF_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button 
+          onClick={() => handleOpenAuth('register')}
           className="underline hover:text-white transition-colors font-bold ml-2 inline-flex items-center gap-0.5"
         >
           Забрать <ArrowUpRight className="w-3.5 h-3.5" />
-        </a>
+        </button>
       </div>
 
       {/* NAVIGATION / HEADER */}
@@ -258,16 +1928,47 @@ export default function Home() {
         </nav>
 
         {/* Header Action Button */}
-        <div>
-          <a 
-            href={REF_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative inline-flex items-center justify-center px-4.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 text-white font-semibold text-xs transition-all duration-300"
-            style={{ fontFamily: 'Georgia' }}
-          >
-            Начать бесплатно
-          </a>
+        <div className="flex items-center gap-4">
+          {isLoggedIn && currentUser ? (
+            <div className="flex items-center gap-3">
+              {/* Quick balance display */}
+              <div className="hidden sm:flex flex-col text-right">
+                <span className="text-[10px] text-slate-400 font-bold tracking-wider">БАЛАНС</span>
+                <span className="text-xs font-mono font-bold text-orange-400">{(currentUser.balance / 100000000).toFixed(8)} BTC</span>
+              </div>
+              <button
+                onClick={() => setIsDashboardOpen(true)}
+                className="relative inline-flex items-center justify-center px-4 py-2 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-[#ffd200] font-bold text-xs transition-all duration-300"
+                style={{ fontFamily: 'Georgia' }}
+              >
+                Личный кабинет
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                title="Выйти"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleOpenAuth('login')}
+                className="text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 transition-colors"
+                style={{ fontFamily: 'Georgia' }}
+              >
+                Войти
+              </button>
+              <button 
+                onClick={() => handleOpenAuth('register')}
+                className="relative inline-flex items-center justify-center px-4.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-bold text-xs shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
+                style={{ fontFamily: 'Georgia' }}
+              >
+                Регистрация
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
