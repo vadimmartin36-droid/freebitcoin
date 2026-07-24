@@ -139,7 +139,7 @@ function CountUp({ target, duration = 2000, suffix = '', prefix = '', decimals =
   );
 }
 
-export default function Home() {
+export default function Home({ initialDashboardOpen = false }: { initialDashboardOpen?: boolean }) {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   
   // Interactive live BTC price simulator to add realism and dynamic feel
@@ -289,11 +289,57 @@ export default function Home() {
           setTimeout(() => {
             setCurrentUser(user);
             setIsLoggedIn(true);
+            if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
+              setIsDashboardOpen(true);
+            }
+          }, 0);
+        } else if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
+          setTimeout(() => {
+            setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
           }, 0);
         }
+      } else if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
+        setTimeout(() => {
+          setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
+        }, 0);
       }
     }
-  }, []);
+  }, [initialDashboardOpen]);
+
+  // Synchronize browser URL bar (/dashboard vs /)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (isDashboardOpen && isLoggedIn && currentUser) {
+      if (window.location.pathname !== '/dashboard') {
+        window.history.pushState({ dashboard: true }, '', '/dashboard');
+      }
+    } else if (!isDashboardOpen) {
+      if (window.location.pathname === '/dashboard') {
+        window.history.pushState({ dashboard: false }, '', '/');
+      }
+    }
+  }, [isDashboardOpen, isLoggedIn, currentUser]);
+
+  // Listen to browser Back / Forward buttons
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = () => {
+      if (window.location.pathname === '/dashboard') {
+        if (isLoggedIn) {
+          setIsDashboardOpen(true);
+        } else {
+          setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
+        }
+      } else {
+        setIsDashboardOpen(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isLoggedIn]);
 
   // Sync current user modifications to localStorage
   const syncUserToStorage = (updatedUser: any) => {
@@ -834,13 +880,26 @@ export default function Home() {
         <aside className="w-full md:w-80 shrink-0 bg-[#070816]/95 border-b md:border-b-0 md:border-r border-white/5 relative z-20 flex flex-col justify-between p-6">
           <div>
             {/* Header / Brand */}
-            <div className="flex items-center gap-2.5 pb-6 border-b border-white/5 mb-6" style={{ fontFamily: 'Courier New' }}>
-              <div className="w-8 h-8 bg-gradient-to-tr from-orange-500 to-yellow-400 rounded-lg flex items-center justify-center font-bold text-slate-900 shadow-[0_0_15px_rgba(247,151,30,0.3)]">
-                ₿
+            <div className="flex items-center gap-3.5 pb-6 border-b border-white/5 mb-6">
+              <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-amber-400 to-yellow-300 rounded-2xl blur-[8px] opacity-75" />
+                <div className="relative w-12 h-12 bg-gradient-to-tr from-[#12132b] to-[#090a18] border border-orange-500/50 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 via-amber-500/10 to-transparent" />
+                  <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-amber-400 via-yellow-200 to-orange-400 drop-shadow-[0_0_10px_rgba(247,151,30,0.7)]">
+                    ₿
+                  </span>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-orange-400 to-amber-300 rounded-full border-2 border-slate-950 flex items-center justify-center text-[8px] font-black text-slate-950 shadow-sm">
+                    ✦
+                  </div>
+                </div>
               </div>
               <div>
-                <span className="font-['Poppins'] font-bold text-lg text-white">Freebitco<span className="text-orange-400">Cabinet</span></span>
-                <span className="block text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                <span className="font-['Poppins'] font-black text-2xl tracking-tight text-white flex items-center gap-1">
+                  <span>Bit</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400">Bonus</span>
+                  <span className="text-white px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 rounded-lg text-xs font-bold ml-1 text-orange-300">Hub</span>
+                </span>
+                <span className="block text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Личный кабинет
                 </span>
               </div>
@@ -1856,40 +1915,39 @@ export default function Home() {
   }
 
   return (
-    <div id="home" className="relative min-h-screen overflow-hidden text-slate-100 selection:bg-[#f7971e]/30 selection:text-[#ffd200]" style={{ backgroundColor: '#03040b', backgroundImage: 'radial-gradient(circle at 50% 0%, #0e0e26 0%, #03040b 70%, #010105 100%)', lineHeight: '23px', paddingLeft: '0px', marginLeft: '0px', marginBottom: '0px', marginTop: '0px' }}>
+    <div id="home" className="relative min-h-screen overflow-hidden text-slate-100 selection:bg-[#f7971e]/30 selection:text-[#ffd200]" style={{ backgroundColor: '#03040e', backgroundImage: 'radial-gradient(ellipse 120% 80% at 50% -5%, #171838 0%, #0a0c22 35%, #040511 70%, #020208 100%)', lineHeight: '23px', paddingLeft: '0px', marginLeft: '0px', marginBottom: '0px', marginTop: '0px' }}>
       
-      {/* 1. Dynamic Grid Overlays for Web3 tech feel */}
+      {/* 1. Continuous Dynamic Tech Grid Across Entire Site */}
       <div 
-        className="absolute inset-0 pointer-events-none z-0" 
+        className="absolute inset-0 pointer-events-none z-0 opacity-30" 
         style={{
-          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-          maskImage: 'radial-gradient(circle at 50% 50%, white 40%, transparent 100%)',
-          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, white 40%, transparent 100%)',
+          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)',
+          backgroundSize: '30px 30px',
         }}
       />
       <div 
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" 
         style={{
-          backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)',
-          backgroundSize: '120px 120px',
+          backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px)',
+          backgroundSize: '110px 110px',
         }}
       />
 
-      {/* 2. Layered High-End Glowing Orbs (Nebula Effect) */}
-      <div className="absolute top-[-100px] left-[-50px] w-[500px] h-[500px] rounded-full bg-orange-500/10 blur-[130px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '14s' }} />
-      <div className="absolute top-[25%] left-[-200px] w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-[150px] pointer-events-none mix-blend-screen animate-float" />
-      <div className="absolute top-0 right-[-100px] w-[550px] h-[550px] rounded-full bg-purple-600/10 blur-[140px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '16s' }} />
-      <div className="absolute top-[40%] right-[-150px] w-[450px] h-[450px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none mix-blend-screen animate-float-delayed" />
-      <div className="absolute bottom-[-150px] left-1/3 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-violet-600/10 blur-[160px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '18s' }} />
+      {/* 2. Unified Seamless Ambient Glowing Orbs Across Scroll Height */}
+      <div className="absolute top-[-100px] left-[-100px] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-transparent blur-[150px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '12s' }} />
+      <div className="absolute top-[10%] right-[-150px] w-[650px] h-[650px] rounded-full bg-gradient-to-bl from-purple-600/20 via-indigo-500/10 to-transparent blur-[160px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '15s' }} />
+      <div className="absolute top-[28%] left-[-200px] w-[700px] h-[700px] rounded-full bg-gradient-to-tr from-cyan-500/15 via-blue-600/10 to-transparent blur-[170px] pointer-events-none mix-blend-screen animate-float" />
+      <div className="absolute top-[48%] right-[-200px] w-[650px] h-[650px] rounded-full bg-gradient-to-l from-amber-400/12 via-orange-500/8 to-transparent blur-[150px] pointer-events-none mix-blend-screen animate-float-delayed" />
+      <div className="absolute top-[68%] left-[-150px] w-[700px] h-[700px] rounded-full bg-gradient-to-br from-indigo-600/15 via-purple-600/10 to-transparent blur-[160px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '14s' }} />
+      <div className="absolute bottom-[-100px] left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full bg-gradient-to-t from-orange-500/15 via-violet-600/10 to-transparent blur-[180px] pointer-events-none mix-blend-screen animate-pulse-slow" style={{ animationDuration: '18s' }} />
 
       {/* 3. Subtle floating ambient sparks / digital particles */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-20">
-        <div className="absolute top-[15%] left-[25%] w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping" style={{ animationDuration: '3s' }} />
-        <div className="absolute top-[45%] left-[80%] w-1 h-1 rounded-full bg-cyan-400 animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
-        <div className="absolute top-[75%] left-[15%] w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" style={{ animationDuration: '5s', animationDelay: '2s' }} />
-        <div className="absolute top-[30%] left-[70%] w-1 h-1 rounded-full bg-amber-400 animate-pulse" style={{ animationDuration: '6s' }} />
-        <div className="absolute top-[60%] left-[40%] w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDuration: '3s', animationDelay: '1.5s' }} />
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-25">
+        <div className="absolute top-[12%] left-[25%] w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping" style={{ animationDuration: '3s' }} />
+        <div className="absolute top-[32%] left-[80%] w-1 h-1 rounded-full bg-cyan-400 animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+        <div className="absolute top-[55%] left-[15%] w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+        <div className="absolute top-[75%] left-[70%] w-1 h-1 rounded-full bg-amber-400 animate-pulse" style={{ animationDuration: '6s' }} />
+        <div className="absolute top-[90%] left-[30%] w-1.5 h-1.5 rounded-full bg-cyan-300 animate-ping" style={{ animationDuration: '4s', animationDelay: '1.5s' }} />
       </div>
 
       {/* 1. TOP PROMO BANNER */}
@@ -1908,22 +1966,36 @@ export default function Home() {
 
       {/* NAVIGATION / HEADER */}
       <header className="sticky top-0 z-40 bg-[#03040b]/80 backdrop-blur-md border-b border-white/10 py-4 px-4 md:px-12 flex items-center justify-between transition-all">
-        <div className="flex items-center gap-2.5" style={{ fontFamily: 'Courier New' }}>
-          <div className="w-8 h-8 bg-gradient-to-tr from-orange-500 to-yellow-400 rounded-lg flex items-center justify-center font-bold text-slate-900 shadow-[0_0_15px_rgba(247,151,30,0.3)] shrink-0">
-            ₿
+        <div className="flex items-center gap-3.5 cursor-pointer group">
+          {/* Stunning Logo Icon */}
+          <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-amber-400 to-yellow-300 rounded-2xl blur-[8px] opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative w-12 h-12 bg-gradient-to-tr from-[#12132b] to-[#090a18] border border-orange-500/50 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 via-amber-500/10 to-transparent" />
+              <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-amber-400 via-yellow-200 to-orange-400 drop-shadow-[0_0_10px_rgba(247,151,30,0.7)]">
+                ₿
+              </span>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-orange-400 to-amber-300 rounded-full border-2 border-slate-950 flex items-center justify-center text-[8px] font-black text-slate-950 shadow-sm">
+                ✦
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="font-['Poppins'] font-bold text-lg md:text-xl tracking-tight text-white" style={{ fontFamily: 'Poppins' }}>Freebitco<span className="text-orange-400">Referral</span></span>
+          <div className="flex flex-col">
+            <span className="font-['Poppins'] font-black text-2xl tracking-tight text-white flex items-center gap-1">
+              <span>Bit</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400">Bonus</span>
+              <span className="text-white px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 rounded-lg text-xs font-bold ml-1 text-orange-300">Hub</span>
+            </span>
           </div>
         </div>
 
         {/* Desktop Links */}
-        <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-slate-400">
-          <a href="#benefits" className="hover:text-white transition-colors" style={{ fontFamily: 'Georgia' }}>Преимущества</a>
-          <a href="#steps" className="hover:text-white transition-colors" style={{ fontFamily: 'Georgia' }}>Как начать</a>
-          <a href="#testimonials" className="hover:text-white transition-colors" style={{ fontFamily: 'Georgia' }}>Отзывы</a>
-          <a href="#stats" className="hover:text-white transition-colors" style={{ fontFamily: 'Georgia' }}>Статистика</a>
-          <a href="#faq" className="hover:text-white transition-colors" style={{ fontFamily: 'Georgia' }}>FAQ</a>
+        <nav className="hidden md:flex items-center justify-between text-sm font-medium text-slate-400 w-[450px] h-[30px] leading-[16px]">
+          <a href="#benefits" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Преимущества</a>
+          <a href="#steps" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Как начать</a>
+          <a href="#testimonials" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Отзывы</a>
+          <a href="#stats" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Статистика</a>
+          <a href="#faq" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>FAQ</a>
         </nav>
 
         {/* Header Action Button & Mobile Hamburguer */}
@@ -1932,8 +2004,8 @@ export default function Home() {
             <div className="flex items-center gap-2 md:gap-3">
               {/* Quick balance display */}
               <div className="hidden sm:flex flex-col text-right">
-                <span className="text-[10px] text-slate-400 font-bold tracking-wider">БАЛАНС</span>
-                <span className="text-xs font-mono font-bold text-orange-400">{(currentUser.balance / 100000000).toFixed(8)} BTC</span>
+                <span className="text-[10px] text-slate-400 font-bold tracking-wider" style={{ fontFamily: 'Georgia' }}>БАЛАНС</span>
+                <span className="text-xs font-mono font-bold text-orange-400" style={{ fontFamily: 'Verdana', textAlign: 'right', fontSize: '12px', lineHeight: '16px' }}>{(currentUser.balance / 100000000).toFixed(8)} BTC</span>
               </div>
               <button
                 onClick={() => setIsDashboardOpen(true)}
@@ -2097,8 +2169,12 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="mb-6 inline-block"
+            style={{ height: '39px', lineHeight: '12px', fontSize: '16px', textAlign: 'left', fontFamily: 'Georgia' }}
           >
-            <div className="inline-block p-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_20px_rgba(0,212,255,0.3)]">
+            <div 
+              className="inline-block p-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_20px_rgba(0,212,255,0.3)]"
+              style={{ paddingLeft: '2px', width: '247.988px', height: '33px' }}
+            >
               <div className="px-4 py-1.5 bg-[#0a0b1e]/90 rounded-full flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                 <ShieldCheck className="w-4 h-4 text-cyan-400 animate-pulse" />
                 <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Verified Crypto Platform</span>
@@ -2111,7 +2187,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             className="font-['Poppins'] text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.15] tracking-tight text-white mb-6 text-center lg:text-left"
-            style={{ fontFamily: 'Georgia' }}
+            style={{ fontFamily: 'Georgia', height: '270px', marginBottom: '24px', fontSize: '37px', lineHeight: '39px' }}
           >
             Зарабатывай <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-yellow-300 to-orange-500">Bitcoin</span> <br />
             каждый час бесплатно
@@ -2172,11 +2248,11 @@ export default function Home() {
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-mono font-bold tracking-widest text-emerald-400">СЕТЬ ОНЛАЙН</span>
+                <span className="text-xs font-mono font-bold tracking-widest text-emerald-400" style={{ fontFamily: 'Georgia' }}>СЕТЬ ОНЛАЙН</span>
               </div>
               <div className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg text-xs text-[#b0b0c0]">
                 <Info className="w-3.5 h-3.5 text-[#00d4ff]" />
-                <span>Обновление в реальном времени</span>
+                <span style={{ fontFamily: 'Georgia' }}>Обновление в реальном времени</span>
               </div>
             </div>
 
@@ -2186,14 +2262,14 @@ export default function Home() {
               {/* BTC Price block */}
               <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
                 <div className="text-xs text-[#80809a] font-semibold mb-1">СИМУЛЯТОР КУРСА BTC/USD</div>
-                <div className="flex items-baseline justify-between">
-                  <span className="font-display font-bold text-2xl md:text-3xl text-white tracking-tight">
+                <div className="flex items-baseline justify-between" style={{ fontWeight: 'normal' }}>
+                  <span className="font-display font-bold text-2xl md:text-3xl text-white tracking-tight" style={{ fontFamily: 'Verdana' }}>
                     ${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   <span className={cn(
                     "font-mono text-xs font-semibold px-2 py-0.5 rounded-md flex items-center gap-1",
                     btcTrend === 'up' ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
-                  )}>
+                  )} style={{ fontFamily: 'Verdana' }}>
                     {btcTrend === 'up' ? (
                       <>
                         <TrendingUp className="w-3 h-3" />
@@ -2261,7 +2337,7 @@ export default function Home() {
       </section>
 
       {/* 2. BENEFITS SECTION ("Почему выбирают нас") */}
-      <section id="benefits" className="relative z-10 py-24 bg-[#0a0b1e]/60 border-t border-b border-white/5" style={{ fontFamily: 'Georgia' }}>
+      <section id="benefits" className="relative z-10 py-24 border-t border-white/5 backdrop-blur-[2px]" style={{ fontFamily: 'Georgia' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -2384,7 +2460,7 @@ export default function Home() {
       </section>
 
       {/* 4. SOCIAL PROOF / TRUST BLOCK */}
-      <section className="relative z-10 py-24 bg-[#0a0b1e]/60 border-t border-b border-white/5">
+      <section className="relative z-10 py-24 border-t border-white/5 backdrop-blur-[2px]">
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -2518,7 +2594,7 @@ export default function Home() {
       </section>
 
       {/* 6. FAQ SECTION (Accordion) */}
-      <section id="faq" className="relative z-10 py-24 bg-[#0a0b1e]/60 border-t border-white/5">
+      <section id="faq" className="relative z-10 py-24 border-t border-white/5 backdrop-blur-[2px]">
         <div className="max-w-4xl mx-auto px-6 md:px-12">
           
           <div className="text-center mb-16">
@@ -2616,17 +2692,32 @@ export default function Home() {
       </section>
 
       {/* 8. FOOTER */}
-      <footer className="relative z-10 bg-[#060714] border-t border-white/5 pt-16 pb-12 px-6 md:px-12" style={{ marginTop: '100px' }}>
+      <footer className="relative z-10 bg-black/20 backdrop-blur-xl border-t border-white/10 pt-16 pb-12 px-6 md:px-12" style={{ marginTop: '100px' }}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start justify-between gap-12 border-b border-white/5 pb-12 mb-8">
           
           {/* Logo brand info */}
           <div className="max-w-md">
-            <div className="flex items-center gap-2 mb-4" style={{ fontFamily: 'Georgia' }}>
-              <Coins className="w-6 h-6 text-[#ffd200]" />
-              <span className="font-display font-bold text-lg tracking-wider text-white" style={{ fontFamily: 'Georgia' }}>Freebitco Referral Hub</span>
+            <div className="flex items-center gap-3.5 mb-4">
+              <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-amber-400 to-yellow-300 rounded-2xl blur-[8px] opacity-75" />
+                <div className="relative w-12 h-12 bg-gradient-to-tr from-[#12132b] to-[#090a18] border border-orange-500/50 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 via-amber-500/10 to-transparent" />
+                  <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-amber-400 via-yellow-200 to-orange-400 drop-shadow-[0_0_10px_rgba(247,151,30,0.7)]">
+                    ₿
+                  </span>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-orange-400 to-amber-300 rounded-full border-2 border-slate-950 flex items-center justify-center text-[8px] font-black text-slate-950 shadow-sm">
+                    ✦
+                  </div>
+                </div>
+              </div>
+              <span className="font-['Poppins'] font-black text-2xl tracking-tight text-white flex items-center gap-1">
+                <span>Bit</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400">Bonus</span>
+                <span className="text-white px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 rounded-lg text-xs font-bold ml-1 text-orange-300">Hub</span>
+              </span>
             </div>
             <p className="text-xs text-[#80809a] leading-relaxed" style={{ fontFamily: 'Georgia' }}>
-              Независимая премиальная платформа для привлечения рефералов, аналитики возможностей и обучения крипто-партнеров. Зарабатывайте безопасно вместе с нами.
+              Независимая премиальная платформа BitBonusHub для получения бесплатных сатоши, аналитики возможностей и обучения крипто-партнеров. Зарабатывайте безопасно вместе с нами.
             </p>
           </div>
 
@@ -2662,7 +2753,7 @@ export default function Home() {
         {/* Footer Disclaimers and Copyright */}
         <div className="max-w-7xl mx-auto text-center md:text-left text-[11px] text-[#55556a] space-y-4">
           <p className="leading-relaxed" style={{ fontFamily: 'Georgia' }}>
-            © 2026 Freebitco Referral Hub | Все права защищены. Сайт является независимым информационным партнерским ресурсом. Торговые марки, логотипы и официальное название проекта принадлежат их законным правообладателям. Не является финансовой консультацией. Участие разрешено только для лиц старше 18 лет.
+            © 2026 BitBonusHub | Все права защищены. Сайт является независимым информационным партнерским ресурсом. Торговые марки, логотипы и официальное название проекта принадлежат их законным правообладателям. Не является финансовой консультацией. Участие разрешено только для лиц старше 18 лет.
           </p>
           <p className="leading-relaxed border-l-2 border-[#f7971e]/30 pl-3" style={{ fontFamily: 'Georgia' }}>
             <span className="text-[#80809a] font-bold">Отказ от ответственности (Disclaimer):</span> Результаты получения Биткоинов зависят исключительно от вашей личной активности, количества приглашенных рефералов и регулярности сбора сатоши. Участие в лотереях и ставках MULTIPLY BTC несет в себе риски потери части криптовалютного баланса. Пожалуйста, играйте ответственно и взвешенно.
@@ -2689,16 +2780,17 @@ export default function Home() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="relative w-full max-w-md bg-[#090b1c]/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_25px_60px_-15px_rgba(247,151,30,0.15)] overflow-hidden"
+              className="relative w-full max-w-md bg-gradient-to-b from-[#0e0f26] via-[#090b1c] to-[#050612] border border-orange-500/30 rounded-3xl p-7 md:p-9 shadow-[0_25px_70px_rgba(247,151,30,0.2)] overflow-hidden backdrop-blur-2xl"
               style={{ fontFamily: 'Georgia' }}
             >
-              {/* Top ambient orange glow orb */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-orange-500/10 rounded-full blur-[50px] pointer-events-none" />
+              {/* Top ambient orange & purple glow orbs */}
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-tr from-orange-500/20 via-amber-400/15 to-purple-600/10 rounded-full blur-[60px] pointer-events-none" />
+              <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-cyan-500/10 rounded-full blur-[50px] pointer-events-none" />
 
               {/* Close Button */}
               <button
                 onClick={() => setAuthModal(prev => ({ ...prev, isOpen: false }))}
-                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all duration-200"
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-all duration-200 z-20 shadow-md"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2708,39 +2800,40 @@ export default function Home() {
                 
                 {/* Header Section */}
                 <div className="text-center">
-                  <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-[#f7971e]/10 to-[#ffd200]/10 border border-orange-500/20 mb-4 shadow-[0_0_15px_rgba(247,151,30,0.1)]">
-                    <Coins className="w-6 h-6 text-[#ffd200]" />
+                  <div className="relative inline-flex items-center justify-center p-3.5 rounded-2xl bg-gradient-to-tr from-[#1a1233] to-[#0d0f26] border border-orange-500/30 mb-4 shadow-[0_0_20px_rgba(247,151,30,0.2)] group">
+                    <div className="absolute inset-0 bg-orange-500/10 rounded-2xl blur-md" />
+                    <Coins className="relative w-7 h-7 text-[#ffd200] drop-shadow-[0_0_8px_rgba(255,210,0,0.6)]" />
                   </div>
                   
                   {authModal.mode === 'login' && (
                     <>
-                      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
-                        Вход в личный кабинет
+                      <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
+                        Вход в аккаунт
                       </h2>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                        Введите свои учетные данные для доступа к симулятору майнинга и партнерским инструментам.
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed max-w-xs mx-auto">
+                        Введите свои данные для доступа к кабинету и криптовалютным бонусам.
                       </p>
                     </>
                   )}
 
                   {authModal.mode === 'register' && (
                     <>
-                      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
-                        Создать аккаунт партнера
+                      <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
+                        Регистрация
                       </h2>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                        Регистрация занимает 1 минуту. Получите <span className="text-[#ffd200] font-bold">+1000 сатоши</span> моментально на баланс!
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed max-w-xs mx-auto">
+                        Занимает 1 минуту. Получите <span className="text-[#ffd200] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 border border-orange-500/30 inline-block mt-1">+1000 сатоши</span> на ваш баланс!
                       </p>
                     </>
                   )}
 
                   {authModal.mode === 'forgot' && (
                     <>
-                      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
-                        Восстановление пароля
+                      <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight" style={{ fontFamily: 'Georgia' }}>
+                        Восстановление
                       </h2>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                        Введите адрес электронной почты, указанный при регистрации, для восстановления доступа.
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed max-w-xs mx-auto">
+                        Укажите email, привязанный к аккаунту, для получения инструкции.
                       </p>
                     </>
                   )}
@@ -2752,8 +2845,8 @@ export default function Home() {
                     {/* Email Input */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Адрес</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <Mail className="w-4 h-4" />
                         </span>
                         <input
@@ -2762,7 +2855,7 @@ export default function Home() {
                           value={authModal.email}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="your-email@example.com"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-4 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                       </div>
                     </div>
@@ -2774,13 +2867,13 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => setAuthModal(prev => ({ ...prev, mode: 'forgot' }))}
-                          className="text-[10px] text-orange-400 hover:text-white transition-colors"
+                          className="text-[10px] text-orange-400 hover:text-amber-300 font-semibold transition-colors"
                         >
                           Забыли пароль?
                         </button>
                       </div>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <Lock className="w-4 h-4" />
                         </span>
                         <input
@@ -2789,12 +2882,12 @@ export default function Home() {
                           value={authModal.password}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, password: e.target.value }))}
                           placeholder="••••••••"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-10 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                         <button
                           type="button"
                           onClick={() => setAuthModal(prev => ({ ...prev, showPassword: !prev.showPassword }))}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-white transition-colors"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-white transition-colors"
                         >
                           {authModal.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -2804,23 +2897,23 @@ export default function Home() {
                     {/* Login Action Button */}
                     <button
                       type="submit"
-                      className="w-full py-3.5 mt-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(247,151,30,0.3)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                      className="w-full py-4 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
                     >
                       Войти в аккаунт
                     </button>
 
                     {/* OR divider */}
                     <div className="relative flex py-2 items-center">
-                      <div className="flex-grow border-t border-white/5"></div>
+                      <div className="flex-grow border-t border-white/10"></div>
                       <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-bold uppercase tracking-widest">ИЛИ</span>
-                      <div className="flex-grow border-t border-white/5"></div>
+                      <div className="flex-grow border-t border-white/10"></div>
                     </div>
 
                     {/* Demo Login Button */}
                     <button
                       type="button"
                       onClick={handleDemoLogin}
-                      className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all duration-200"
+                      className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 shadow-md"
                     >
                       <Sparkles className="w-4 h-4 text-[#ffd200]" />
                       Вход через Демо-профиль
@@ -2833,8 +2926,8 @@ export default function Home() {
                     {/* Name Input */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Никнейм / Ваше имя</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <User className="w-4 h-4" />
                         </span>
                         <input
@@ -2843,7 +2936,7 @@ export default function Home() {
                           value={authModal.name}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, name: e.target.value }))}
                           placeholder="Придумайте имя"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-4 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                       </div>
                     </div>
@@ -2851,8 +2944,8 @@ export default function Home() {
                     {/* Email Input */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Адрес</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <Mail className="w-4 h-4" />
                         </span>
                         <input
@@ -2861,7 +2954,7 @@ export default function Home() {
                           value={authModal.email}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="email@example.com"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-4 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                       </div>
                     </div>
@@ -2869,8 +2962,8 @@ export default function Home() {
                     {/* Password Input */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Пароль</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <Lock className="w-4 h-4" />
                         </span>
                         <input
@@ -2879,12 +2972,12 @@ export default function Home() {
                           value={authModal.password}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, password: e.target.value }))}
                           placeholder="Придумайте пароль (мин. 6 знаков)"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-10 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                         <button
                           type="button"
                           onClick={() => setAuthModal(prev => ({ ...prev, showPassword: !prev.showPassword }))}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-white transition-colors"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-white transition-colors"
                         >
                           {authModal.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -2894,8 +2987,8 @@ export default function Home() {
                     {/* Confirm Password Input */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Подтверждение пароля</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <Lock className="w-4 h-4" />
                         </span>
                         <input
@@ -2904,13 +2997,13 @@ export default function Home() {
                           value={authModal.confirmPassword}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, confirmPassword: e.target.value }))}
                           placeholder="Повторите пароль"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-4 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                       </div>
                     </div>
 
-                    {/* Simulation Switch (Beautiful dev tool inside) */}
-                    <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between gap-4 mt-2">
+                    {/* Simulation Switch */}
+                    <div className="p-3.5 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-between gap-4 mt-2">
                       <div>
                         <span className="block text-[10px] font-bold text-slate-300">Режим симуляции ошибки</span>
                         <span className="block text-[9px] text-slate-500">Позволяет проверить форму при сбое</span>
@@ -2919,7 +3012,7 @@ export default function Home() {
                         type="button"
                         onClick={() => setAuthModal(prev => ({ ...prev, errorSimulated: !prev.errorSimulated }))}
                         className={cn(
-                          "w-10 h-6 rounded-full p-1 transition-all duration-300 flex items-center shrink-0",
+                          "w-10 h-6 rounded-full p-1 transition-all duration-300 flex items-center shrink-0 shadow-inner",
                           authModal.errorSimulated ? "bg-rose-500 justify-end" : "bg-white/10 justify-start"
                         )}
                       >
@@ -2930,7 +3023,7 @@ export default function Home() {
                     {/* Register Action Button */}
                     <button
                       type="submit"
-                      className="w-full py-3.5 mt-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(247,151,30,0.3)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                      className="w-full py-4 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
                     >
                       Создать кабинет
                     </button>
@@ -2942,8 +3035,8 @@ export default function Home() {
                     {/* Email Input */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Адрес</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 group-focus-within:text-orange-400 transition-colors">
                           <Mail className="w-4 h-4" />
                         </span>
                         <input
@@ -2952,7 +3045,7 @@ export default function Home() {
                           value={authModal.email}
                           onChange={(e) => setAuthModal(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="email@example.com"
-                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-white placeholder-slate-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/20 transition-all"
+                          className="w-full bg-[#03040c]/70 border border-white/10 rounded-2xl pl-10 pr-4 py-3.5 text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all shadow-inner"
                         />
                       </div>
                     </div>
@@ -2960,7 +3053,7 @@ export default function Home() {
                     {/* Forgot Action Button */}
                     <button
                       type="submit"
-                      className="w-full py-3.5 mt-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(247,151,30,0.3)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                      className="w-full py-4 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
                     >
                       Восстановить пароль
                     </button>
@@ -2968,13 +3061,14 @@ export default function Home() {
                 )}
 
                 {/* Footer Switch links */}
-                <div className="pt-4 border-t border-white/5 text-center text-xs text-slate-400 font-medium">
+                <div className="pt-5 border-t border-white/10 text-center text-xs text-slate-400 font-medium">
                   {authModal.mode === 'login' && (
-                    <p>
-                      Ещё нет аккаунта?{" "}
+                    <p style={{ fontFamily: 'Georgia' }}>
+                      <span style={{ fontFamily: 'Georgia' }}>Ещё нет аккаунта?</span>{" "}
                       <button
                         onClick={() => setAuthModal(prev => ({ ...prev, mode: 'register' }))}
-                        className="text-orange-400 font-bold hover:underline"
+                        className="text-orange-400 font-bold hover:text-amber-300 transition-colors ml-1"
+                        style={{ fontFamily: 'Georgia' }}
                       >
                         Создать сейчас
                       </button>
@@ -2982,11 +3076,12 @@ export default function Home() {
                   )}
 
                   {authModal.mode === 'register' && (
-                    <p>
-                      Уже есть аккаунт?{" "}
+                    <p style={{ fontFamily: 'Georgia' }}>
+                      <span style={{ fontFamily: 'Georgia' }}>Уже есть аккаунт?</span>{" "}
                       <button
                         onClick={() => setAuthModal(prev => ({ ...prev, mode: 'login' }))}
-                        className="text-orange-400 font-bold hover:underline"
+                        className="text-orange-400 font-bold hover:text-amber-300 transition-colors ml-1"
+                        style={{ fontFamily: 'Georgia' }}
                       >
                         Войти в систему
                       </button>
@@ -2996,7 +3091,8 @@ export default function Home() {
                   {authModal.mode === 'forgot' && (
                     <button
                       onClick={() => setAuthModal(prev => ({ ...prev, mode: 'login' }))}
-                      className="text-orange-400 font-bold hover:underline flex items-center justify-center gap-1 mx-auto"
+                      className="text-orange-400 font-bold hover:text-amber-300 transition-colors flex items-center justify-center gap-1 mx-auto"
+                      style={{ fontFamily: 'Georgia' }}
                     >
                       <ArrowRight className="w-3.5 h-3.5 rotate-180 text-orange-400" /> Вернуться на страницу входа
                     </button>

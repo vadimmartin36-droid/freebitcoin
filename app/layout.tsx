@@ -2,8 +2,8 @@ import type {Metadata} from 'next';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
-  title: 'Freebitco.in | Бесплатный Биткоин Каждый Час — Самый Надежный Кран',
-  description: 'Зарабатывай сатоши каждый час бесплатно и без вложений. Получай 50% реферальных комиссионных, участвуй в лотереях и умножай свой Bitcoin!',
+  title: 'BitBonusHub | Бесплатный Биткоин Каждый Час — Крипто Награды и Бонусы',
+  description: 'BitBonusHub — Зарабатывай сатоши каждый час бесплатно и без вложений. Получай реферальные комиссионные, участвуй в лотереях и умножай свой Bitcoin!',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
