@@ -1990,12 +1990,12 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         </div>
 
         {/* Desktop Links */}
-        <nav className="hidden md:flex items-center justify-between text-sm font-medium text-slate-400 w-[450px] h-[30px] leading-[16px]">
-          <a href="#benefits" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Преимущества</a>
-          <a href="#steps" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Как начать</a>
-          <a href="#testimonials" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Отзывы</a>
-          <a href="#stats" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>Статистика</a>
-          <a href="#faq" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia' }}>FAQ</a>
+        <nav className="hidden md:flex items-center justify-between text-sm font-medium text-slate-400 w-[450px] h-[30px]" style={{ fontSize: '14px', lineHeight: '16px', fontFamily: 'Georgia' }}>
+          <a href="#benefits" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>Преимущества</a>
+          <a href="#steps" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>Как начать</a>
+          <a href="#testimonials" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px', fontWeight: 'normal', textDecorationLine: 'none' }}>Отзывы</a>
+          <a href="#stats" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>Статистика</a>
+          <a href="#faq" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>FAQ</a>
         </nav>
 
         {/* Header Action Button & Mobile Hamburguer */}
@@ -2168,16 +2168,14 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-6 inline-block"
-            style={{ height: '39px', lineHeight: '12px', fontSize: '16px', textAlign: 'left', fontFamily: 'Georgia' }}
+            className="mb-4 inline-block"
           >
             <div 
-              className="inline-block p-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_20px_rgba(0,212,255,0.3)]"
-              style={{ paddingLeft: '2px', width: '247.988px', height: '33px' }}
+              className="inline-block p-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_15px_rgba(0,212,255,0.25)] transform scale-90 origin-center lg:origin-left"
             >
-              <div className="px-4 py-1.5 bg-[#0a0b1e]/90 rounded-full flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
-                <ShieldCheck className="w-4 h-4 text-cyan-400 animate-pulse" />
-                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Verified Crypto Platform</span>
+              <div className="px-3 py-1 bg-[#0a0b1e]/90 rounded-full flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
+                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Verified Crypto Platform</span>
               </div>
             </div>
           </motion.div>
