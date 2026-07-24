@@ -1853,7 +1853,7 @@ export default function Home() {
   }
 
   return (
-    <div id="home" className="relative min-h-screen overflow-hidden text-slate-100 selection:bg-[#f7971e]/30 selection:text-[#ffd200]" style={{ backgroundColor: '#03040b', backgroundImage: 'radial-gradient(circle at 50% 0%, #0e0e26 0%, #03040b 70%, #010105 100%)', lineHeight: '23px', paddingLeft: '0px', marginLeft: '0px', marginBottom: '0px', marginTop: '99px' }}>
+    <div id="home" className="relative min-h-screen overflow-hidden text-slate-100 selection:bg-[#f7971e]/30 selection:text-[#ffd200]" style={{ backgroundColor: '#03040b', backgroundImage: 'radial-gradient(circle at 50% 0%, #0e0e26 0%, #03040b 70%, #010105 100%)', lineHeight: '23px', paddingLeft: '0px', marginLeft: '0px', marginBottom: '0px', marginTop: '0px' }}>
       
       {/* 1. Dynamic Grid Overlays for Web3 tech feel */}
       <div 
