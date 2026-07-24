@@ -4,19 +4,12 @@ import './globals.css'; // Global styles
 export const metadata: Metadata = {
   title: 'Freebitco.in | Бесплатный Биткоин Каждый Час — Самый Надежный Кран',
   description: 'Зарабатывай сатоши каждый час бесплатно и без вложений. Получай 50% реферальных комиссионных, участвуй в лотереях и умножай свой Bitcoin!',
-  icons: {
-    icon: '/icon.jpg',
-    shortcut: '/icon.jpg',
-    apple: '/icon.jpg',
-  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="ru" className="scroll-smooth">
       <head>
-        <link rel="icon" href="/icon.jpg" type="image/jpeg" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-icon.jpg" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
