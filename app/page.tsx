@@ -190,6 +190,9 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     message: string;
   } | null>(null);
 
+  // --- IDLE / PAUSED EARNINGS MODAL ---
+  const [idleModalOpen, setIdleModalOpen] = React.useState(false);
+
   // --- FREE ROLL CRAN SIMULATOR ---
   const [rollStatus, setRollStatus] = React.useState({
     isRolling: false,
@@ -341,6 +344,20 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     currentUserRef.current = currentUser;
   }, [multiplyBet, isBotRunning, currentUser]);
 
+  // Sync current user modifications to localStorage
+  const syncUserToStorage = React.useCallback((updatedUser: any) => {
+    if (typeof window === 'undefined' || !updatedUser) return;
+    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+    const index = accounts.findIndex((a: any) => a.email === updatedUser.email);
+    if (index !== -1) {
+      accounts[index] = updatedUser;
+    } else {
+      accounts.push(updatedUser);
+    }
+    localStorage.setItem('freebitco_accounts', JSON.stringify(accounts));
+    setCurrentUser(updatedUser);
+  }, []);
+
   // Initial user seeding & session restoration
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -373,7 +390,18 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         const user = accounts.find((a: any) => a.email === session);
         if (user) {
           setTimeout(() => {
-            setCurrentUser(user);
+            const now = Date.now();
+            if (user.lastMiningTimestamp) {
+              const diffMs = now - user.lastMiningTimestamp;
+              if (diffMs > 15000) {
+                setIdleModalOpen(true);
+              }
+            } else {
+              setIdleModalOpen(true);
+            }
+            let finalUser = { ...user, lastMiningTimestamp: now };
+            setCurrentUser(finalUser);
+            syncUserToStorage(finalUser);
             setIsLoggedIn(true);
             if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
               setIsDashboardOpen(true);
@@ -426,20 +454,6 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isLoggedIn]);
-
-  // Sync current user modifications to localStorage
-  const syncUserToStorage = (updatedUser: any) => {
-    if (typeof window === 'undefined' || !updatedUser) return;
-    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
-    const index = accounts.findIndex((a: any) => a.email === updatedUser.email);
-    if (index !== -1) {
-      accounts[index] = updatedUser;
-    } else {
-      accounts.push(updatedUser);
-    }
-    localStorage.setItem('freebitco_accounts', JSON.stringify(accounts));
-    setCurrentUser(updatedUser);
-  };
 
   // Cooldown timer ticker for faucet claim
   React.useEffect(() => {
@@ -501,19 +515,45 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           };
           syncUserToStorage(updated);
         } else if (rand < 0.45) {
-          // Passive mining yield (+1 satoshi every 10 seconds)
+          // Passive mining yield (+1 satoshi every 20 seconds)
           const updated = {
             ...currentUserRef.current!,
-            balance: currentUserRef.current!.balance + 1
+            balance: currentUserRef.current!.balance + 1,
+            lastMiningTimestamp: Date.now()
           };
           syncUserToStorage(updated);
         }
-      }, 10000);
+      }, 20000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [isLoggedIn, referralList]);
+
+  // Detect tab backgrounding / return after idle
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let hiddenTime = 0;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenTime = Date.now();
+      } else {
+        if (hiddenTime > 0) {
+          const awayTimeMs = Date.now() - hiddenTime;
+          if (awayTimeMs > 15000 && isLoggedIn && isDashboardOpen) {
+            setIdleModalOpen(true);
+          }
+          hiddenTime = 0;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isLoggedIn, isDashboardOpen]);
 
   // Two-way calculator synchronization
   React.useEffect(() => {
@@ -547,8 +587,18 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     const user = accounts.find((a: any) => a.email.toLowerCase() === authModal.email.toLowerCase() && a.password === authModal.password);
 
     if (user) {
-      localStorage.setItem('freebitco_session', user.email);
-      setCurrentUser(user);
+      const now = Date.now();
+      if (user.lastMiningTimestamp) {
+        if (now - user.lastMiningTimestamp > 15000) {
+          setIdleModalOpen(true);
+        }
+      } else {
+        setIdleModalOpen(true);
+      }
+      const updatedUser = { ...user, lastMiningTimestamp: now };
+      localStorage.setItem('freebitco_session', updatedUser.email);
+      setCurrentUser(updatedUser);
+      syncUserToStorage(updatedUser);
       setIsLoggedIn(true);
       setAuthModal(prev => ({ ...prev, isOpen: false }));
       setIsDashboardOpen(true);
@@ -561,8 +611,18 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
     const demoUser = accounts.find((a: any) => a.email === 'demo@freebitco.io');
     if (demoUser) {
-      localStorage.setItem('freebitco_session', demoUser.email);
-      setCurrentUser(demoUser);
+      const now = Date.now();
+      if (demoUser.lastMiningTimestamp) {
+        if (now - demoUser.lastMiningTimestamp > 15000) {
+          setIdleModalOpen(true);
+        }
+      } else {
+        setIdleModalOpen(true);
+      }
+      const updatedUser = { ...demoUser, lastMiningTimestamp: now };
+      localStorage.setItem('freebitco_session', updatedUser.email);
+      setCurrentUser(updatedUser);
+      syncUserToStorage(updatedUser);
       setIsLoggedIn(true);
       setAuthModal(prev => ({ ...prev, isOpen: false }));
       setIsDashboardOpen(true);
@@ -1175,12 +1235,12 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                       Добро пожаловать, {currentUser.name}!
                     </h2>
                     <p className="text-xs md:text-sm text-slate-400 leading-relaxed mb-4" style={{ fontFamily: 'Georgia' }}>
-                      Рады видеть вас! На вашей панели работает симулятор автоматического майнинга сатоши. Пока открыт этот личный кабинет, баланс плавно увеличивается за счет лояльности рефералов и внутренней стейкинг-системы.
+                      Рады видеть вас! На вашей панели работает симулятор автоматического майнинга сатоши. Начисление происходит только пока открыта эта вкладка браузера. При закрытии сайта или спящем режиме майнинг останавливается.
                     </p>
                     <div className="flex flex-wrap gap-4 text-xs font-bold text-emerald-400 bg-emerald-400/5 border border-emerald-500/10 px-4 py-2.5 rounded-xl inline-flex">
                       <span className="flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                         <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                        Стейкинг-майнер запущен (1 сатоши в 10 секунд)
+                        Стейкинг-майнер запущен (1 сатоши в 20 секунд • Только при открытой вкладке)
                       </span>
                     </div>
                   </div>
@@ -3578,6 +3638,78 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     Попробовать ещё раз
                   </button>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 11. IDLE / PAUSED EARNINGS MODAL */}
+      <AnimatePresence>
+        {idleModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIdleModalOpen(false)}
+              className="absolute inset-0 bg-[#020208]/85 backdrop-blur-md"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="relative w-full max-w-md bg-[#090b1c]/95 border border-amber-500/25 rounded-3xl p-6 md:p-8 text-center shadow-[0_0_50px_rgba(245,158,11,0.2)]"
+              style={{ fontFamily: 'Georgia' }}
+            >
+              <button
+                onClick={() => setIdleModalOpen(false)}
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-400 hover:text-white transition-all duration-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="space-y-6">
+                {/* Sad Emoji Header */}
+                <div className="inline-flex relative">
+                  <div className="absolute inset-0 rounded-full bg-amber-500/20 blur-xl animate-pulse" />
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-b from-amber-500/20 to-orange-500/10 border border-amber-500/30 flex items-center justify-center text-4xl shadow-inner select-none">
+                    😢
+                  </div>
+                </div>
+
+                {/* Title & Warning Text */}
+                <div className="space-y-2">
+                  <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                    Вас долго не было на нашем сайте...
+                  </h3>
+                  <p className="text-sm md:text-base text-amber-200/90 font-medium leading-relaxed">
+                    Заработок сатоши был приостановлен!
+                  </p>
+                </div>
+
+                {/* Requirement Info Box */}
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-left space-y-2">
+                  <div className="flex items-start gap-2.5">
+                    <Zap className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                      Чтобы постоянно зарабатывать сатоши, ваш компьютер должен быть постоянно включен, а сайт должен быть открыт на этой вкладке.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action CTA Button */}
+                <button
+                  onClick={() => setIdleModalOpen(false)}
+                  className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-4 h-4 fill-current" />
+                  Понятно, возобновить майнинг
+                </button>
               </div>
             </motion.div>
           </div>
