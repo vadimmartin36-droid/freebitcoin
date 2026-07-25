@@ -2213,8 +2213,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 href={REF_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-2xl text-slate-900 font-bold text-xl shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 text-center"
-                style={{ fontFamily: 'Georgia' }}
+                className="relative w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-2xl text-slate-900 font-bold text-xl shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 text-center"
+                style={{ fontFamily: 'Georgia', paddingTop: '10px', paddingBottom: '10px', paddingLeft: '35px', paddingRight: '35px' }}
               >
                 🚀 Получить бонус сейчас
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
@@ -2299,11 +2299,11 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-white/[0.02] rounded-xl border border-white/5 text-center">
                   <div className="text-[10px] text-[#80809a] font-bold mb-1 uppercase tracking-wider">КОМИССИЯ КРАНА</div>
-                  <div className="font-display font-bold text-xl text-white">50%</div>
+                  <div className="font-display font-bold text-xl text-white" style={{ fontFamily: 'Verdana' }}>50%</div>
                 </div>
                 <div className="p-3 bg-white/[0.02] rounded-xl border border-white/5 text-center">
                   <div className="text-[10px] text-[#80809a] font-bold mb-1 uppercase tracking-wider">Шанс выиграть</div>
-                  <div className="font-display font-bold text-xl text-[#00d4ff]">до $200 / час</div>
+                  <div className="font-display font-bold text-xl text-[#00d4ff]" style={{ fontFamily: 'Verdana' }}>до $200 / час</div>
                 </div>
               </div>
 
@@ -2447,7 +2447,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 href={REF_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative inline-flex items-center gap-3 px-10 py-4.5 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-xl text-slate-900 font-bold text-base tracking-wider shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                className="relative inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-xl text-slate-900 font-bold text-base tracking-wider shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                style={{ paddingTop: '15px', paddingBottom: '14px', paddingLeft: '35px', paddingRight: '35px' }}
               >
                 Начать зарабатывать сейчас
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
