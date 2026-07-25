@@ -899,7 +899,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400">Bonus</span>
                   <span className="text-white px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 rounded-lg text-xs font-bold ml-1 text-orange-300">Hub</span>
                 </span>
-                <span className="block text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                <span className="block text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1" style={{ fontFamily: 'Georgia' }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Личный кабинет
                 </span>
               </div>
@@ -912,9 +912,9 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#070816] rounded-full" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                <div className="text-xs font-bold text-white truncate flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                   {currentUser.name}
-                  <span className="text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.2 rounded-md">
+                  <span className="text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.2 rounded-md" style={{ fontFamily: 'Georgia' }}>
                     {currentUser.tier}
                   </span>
                 </div>
@@ -925,16 +925,16 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             {/* Balance Ticker Card */}
             <div className="p-4 bg-gradient-to-br from-white/[0.04] to-transparent rounded-2xl border border-white/5 mb-8">
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5 flex justify-between items-center">
-                <span>ТЕКУЩИЙ БАЛАНС</span>
+                <span style={{ fontFamily: 'Georgia' }}>ТЕКУЩИЙ БАЛАНС</span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#ffd200] animate-ping" />
               </div>
               <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
                 <span className="text-orange-400">₿</span>
-                <span>{(currentUser.balance / 100000000).toFixed(8)}</span>
+                <span style={{ fontFamily: 'Verdana' }}>{(currentUser.balance / 100000000).toFixed(8)}</span>
               </div>
               <div className="flex justify-between items-center text-[10px] text-[#80809a] mt-1 font-mono">
-                <span>{currentUser.balance.toLocaleString('en-US')} SAT</span>
-                <span className="text-emerald-400 font-semibold">≈ ${(currentUser.balance / 100000000 * btcPrice).toFixed(2)} USD</span>
+                <span style={{ fontFamily: 'Verdana' }}>{currentUser.balance.toLocaleString('en-US')} SAT</span>
+                <span className="text-emerald-400 font-semibold" style={{ fontFamily: 'Verdana' }}>≈ ${(currentUser.balance / 100000000 * btcPrice).toFixed(2)} USD</span>
               </div>
             </div>
 
@@ -948,7 +948,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 )}
               >
                 <Activity className="w-4 h-4" />
-                <span>Панель управления</span>
+                <span style={{ fontFamily: 'Georgia' }}>Панель управления</span>
               </button>
               <button
                 onClick={() => { setIsBotRunning(false); setActiveDashboardTab('faucet'); }}
@@ -959,7 +959,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
               >
                 <span className="flex items-center gap-3">
                   <Coins className="w-4 h-4 text-orange-400" />
-                  <span>Кран FREE BTC</span>
+                  <span style={{ fontFamily: 'Georgia' }}>Кран FREE BTC</span>
                 </span>
                 {rollStatus.cooldownSeconds === 0 && (
                   <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
@@ -973,7 +973,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 )}
               >
                 <TrendingUp className="w-4 h-4 text-cyan-400" />
-                <span>Умножитель MULTIPLY</span>
+                <span style={{ fontFamily: 'Georgia' }}>Умножитель MULTIPLY</span>
               </button>
               <button
                 onClick={() => { setIsBotRunning(false); setActiveDashboardTab('referrals'); }}
@@ -983,7 +983,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 )}
               >
                 <Users className="w-4 h-4 text-[#ffd200]" />
-                <span>Рефералы & Ссылки</span>
+                <span style={{ fontFamily: 'Georgia' }}>Рефералы & Ссылки</span>
               </button>
               <button
                 onClick={() => { setIsBotRunning(false); setActiveDashboardTab('calculator'); }}
@@ -993,7 +993,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 )}
               >
                 <Calculator className="w-4 h-4 text-emerald-400" />
-                <span>Конвертер сатоши</span>
+                <span style={{ fontFamily: 'Georgia' }}>Конвертер сатоши</span>
               </button>
               <button
                 onClick={() => { setIsBotRunning(false); setActiveDashboardTab('settings'); }}
@@ -1003,7 +1003,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 )}
               >
                 <Settings className="w-4 h-4 text-purple-400" />
-                <span>Настройки кабинета</span>
+                <span style={{ fontFamily: 'Georgia' }}>Настройки кабинета</span>
               </button>
             </nav>
           </div>
@@ -1013,6 +1013,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             <button
               onClick={() => setIsDashboardOpen(false)}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs text-white font-bold transition-all"
+              style={{ fontFamily: 'Georgia' }}
             >
               <ArrowRight className="w-4 h-4 rotate-180" />
               Вернуться на лендинг
@@ -1020,6 +1021,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-bold transition-all"
+              style={{ fontFamily: 'Georgia' }}
             >
               <LogOut className="w-4 h-4" />
               Выйти из аккаунта
@@ -1032,7 +1034,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           {/* Dashboard Sticky Top Bar */}
           <header className="sticky top-0 z-20 bg-[#070816]/70 backdrop-blur-md border-b border-white/5 px-6 md:px-12 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-sm font-bold text-white capitalize md:text-lg">
+              <h1 className="text-sm font-bold text-white capitalize md:text-lg" style={{ fontFamily: 'Georgia' }}>
                 {activeDashboardTab === 'overview' && '📊 Моя аналитика'}
                 {activeDashboardTab === 'faucet' && '🎲 Кран FREE BTC'}
                 {activeDashboardTab === 'multiply' && '📈 Игра HI-LO Multiplier'}
@@ -1045,16 +1047,16 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             {/* Quick stats on Header */}
             <div className="flex items-center gap-4">
               {/* BTC Ticker widget */}
-              <div className="hidden lg:flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs">
+              <div className="hidden lg:flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs" style={{ fontFamily: 'Verdana' }}>
                 <span className="font-bold text-slate-400">BTC/USD:</span>
-                <span className="font-mono font-bold text-white">${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono font-bold text-white" style={{ fontFamily: 'Verdana' }}>${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                 <span className={cn("text-[10px] font-mono", btcTrend === 'up' ? 'text-emerald-400' : 'text-rose-400')}>
                   {btcTrend === 'up' ? '▲' : '▼'}
                 </span>
               </div>
               <div className="flex items-center gap-2 bg-[#ffd200]/10 border border-[#ffd200]/20 rounded-xl px-3 py-1 text-xs text-[#ffd200] font-bold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{currentUser.loyaltyPoints} RP</span>
+                <span style={{ fontFamily: 'Verdana' }}>{currentUser.loyaltyPoints} RP</span>
               </div>
             </div>
           </header>
@@ -1069,17 +1071,17 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 <div className="bg-gradient-to-r from-orange-500/10 via-yellow-400/5 to-transparent border border-orange-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
                   <div className="absolute -right-16 -bottom-16 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
                   <div className="max-w-xl relative z-10">
-                    <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2.5 py-1 rounded-full font-black uppercase tracking-widest mb-3 inline-block">
+                    <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2.5 py-1 rounded-full font-black uppercase tracking-widest mb-3 inline-block" style={{ fontFamily: 'Georgia' }}>
                       🔥 Активный аккаунт
                     </span>
                     <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-2" style={{ fontFamily: 'Georgia' }}>
                       Добро пожаловать, {currentUser.name}!
                     </h2>
-                    <p className="text-xs md:text-sm text-slate-400 leading-relaxed mb-4">
+                    <p className="text-xs md:text-sm text-slate-400 leading-relaxed mb-4" style={{ fontFamily: 'Georgia' }}>
                       Рады видеть вас! На вашей панели работает симулятор автоматического майнинга сатоши. Пока открыт этот личный кабинет, баланс плавно увеличивается за счет лояльности рефералов и внутренней стейкинг-системы.
                     </p>
                     <div className="flex flex-wrap gap-4 text-xs font-bold text-emerald-400 bg-emerald-400/5 border border-emerald-500/10 px-4 py-2.5 rounded-xl inline-flex">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                         <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                         Стейкинг-майнер запущен (+1 SAT в секунды)
                       </span>
@@ -1091,72 +1093,72 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Stat A */}
                   <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Всего сатоши</div>
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider" style={{ fontFamily: 'Georgia' }}>Всего сатоши</div>
                     <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
                       <span className="text-orange-400">₿</span>
-                      <span>{currentUser.balance.toLocaleString('en-US')}</span>
+                      <span style={{ fontFamily: 'Verdana' }}>{currentUser.balance.toLocaleString('en-US')}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">До вывода: {Math.max(0, 100000 - currentUser.balance).toLocaleString('en-US')} SAT</div>
+                    <div className="text-[10px] text-slate-400 mt-1" style={{ fontFamily: 'Georgia' }}>До вывода: {Math.max(0, 100000 - currentUser.balance).toLocaleString('en-US')} SAT</div>
                   </div>
 
                   {/* Stat B */}
                   <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Сборов с крана</div>
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider" style={{ fontFamily: 'Georgia' }}>Сборов с крана</div>
                     <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
                       <Coins className="w-5 h-5 text-[#ffd200]" />
-                      <span>{currentUser.cumulativeClaims}</span>
+                      <span style={{ fontFamily: 'Verdana' }}>{currentUser.cumulativeClaims}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Следующий уровень: {10 - (currentUser.cumulativeClaims % 10)} сборов</div>
+                    <div className="text-[10px] text-slate-400 mt-1" style={{ fontFamily: 'Georgia' }}>Следующий уровень: {10 - (currentUser.cumulativeClaims % 10)} сборов</div>
                   </div>
 
                   {/* Stat C */}
                   <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Награда рефералов</div>
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider" style={{ fontFamily: 'Georgia' }}>Награда рефералов</div>
                     <div className="font-display font-black text-2xl text-[#ffd200] tracking-tight flex items-baseline gap-1.5">
                       <Users className="w-5 h-5" />
-                      <span>50%</span>
+                      <span style={{ fontFamily: 'Verdana' }}>50%</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Пассивный доход от ROLL сборов друзей</div>
+                    <div className="text-[10px] text-slate-400 mt-1" style={{ fontFamily: 'Georgia' }}>Пассивный доход от ROLL сборов друзей</div>
                   </div>
 
                   {/* Stat D */}
                   <div className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Лояльность (RP)</div>
+                    <div className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider" style={{ fontFamily: 'Georgia' }}>Лояльность (RP)</div>
                     <div className="font-display font-black text-2xl text-[#00d4ff] tracking-tight flex items-baseline gap-1.5">
                       <Gift className="w-5 h-5" />
-                      <span>{currentUser.loyaltyPoints}</span>
+                      <span style={{ fontFamily: 'Verdana' }}>{currentUser.loyaltyPoints}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1">Используйте RP для баффов на кран (+1000%)</div>
+                    <div className="text-[10px] text-slate-400 mt-1" style={{ fontFamily: 'Georgia' }}>Используйте RP для баффов на кран (+1000%)</div>
                   </div>
                 </div>
 
                 {/* Live Feed and Tier Progression */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Live Activity Feed */}
-                  <div className="lg:col-span-2 p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                  <div className="lg:col-span-2 p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4" style={{ fontFamily: 'Georgia' }}>
                     <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                         <Activity className="w-4 h-4 text-[#ffd200]" />
                         Живой лог активности партнера
                       </h3>
-                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-500/10 px-2.5 py-0.5 rounded-md animate-pulse">
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-500/10 px-2.5 py-0.5 rounded-md animate-pulse" style={{ fontFamily: 'Georgia' }}>
                         В эфире
                       </span>
                     </div>
 
                     <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                       {recentNotifications.length === 0 ? (
-                        <div className="text-center py-8 text-xs text-[#80809a] italic">
+                        <div className="text-center py-8 text-xs text-[#80809a] italic" style={{ fontFamily: 'Georgia' }}>
                           Ожинение трансляции сборов... (новые начисления поступают каждые несколько секунд)
                         </div>
                       ) : (
                         recentNotifications.map(n => (
                           <div key={n.id} className="p-3 bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 rounded-xl flex items-center justify-between transition-all">
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                              <p className="text-xs text-slate-300 truncate">{n.text}</p>
+                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <p className="text-xs text-slate-300 truncate" style={{ fontFamily: 'Georgia' }}>{n.text}</p>
                             </div>
-                            <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-3">{n.time}</span>
+                            <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-3" style={{ fontFamily: 'Verdana' }}>{n.time}</span>
                           </div>
                         ))
                       )}
@@ -1164,7 +1166,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                   </div>
 
                   {/* Tier status */}
-                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6">
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6" style={{ fontFamily: 'Georgia' }}>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                       Уровень лояльности партнера
                     </h3>
@@ -1208,7 +1210,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 
                 {/* Rolling Slot machine and claims block */}
                 <div className="lg:col-span-2 space-y-6">
-                  <div className="bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl p-8 text-center space-y-8 relative overflow-hidden">
+                  <div className="bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl p-8 text-center space-y-8 relative overflow-hidden" style={{ fontFamily: 'Georgia' }}>
                     <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
                     
                     <div>
@@ -1276,6 +1278,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                           animate={{ opacity: 1, scale: 1 }} 
                           exit={{ opacity: 0 }} 
                           className="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center space-y-2"
+                          style={{ fontFamily: 'Georgia' }}
                         >
                           <div className="text-xs text-emerald-400 font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
                             <CheckCircle2 className="w-4 h-4" /> Выигрыш начислен!
@@ -1295,7 +1298,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 </div>
 
                 {/* Reward Odds Table column */}
-                <div className="p-6 bg-[#070816]/80 border border-white/5 rounded-3xl space-y-4">
+                <div className="p-6 bg-[#070816]/80 border border-white/5 rounded-3xl space-y-4" style={{ fontFamily: 'Georgia' }}>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">
                     Таблица выигрышных чисел
                   </h3>
@@ -1337,7 +1340,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                 
                 {/* Description info */}
-                <div className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6" style={{ fontFamily: 'Georgia' }}>
                   <div>
                     <h2 className="text-base font-bold text-white flex items-center gap-1.5">
                       <TrendingUp className="w-5 h-5 text-cyan-400" />
@@ -1354,7 +1357,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Manual Game Box */}
-                  <div className="lg:col-span-2 p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                  <div className="lg:col-span-2 p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6" style={{ fontFamily: 'Georgia' }}>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2 flex items-center gap-1">
                       🕹️ Ручные ставки
                     </h3>
@@ -1464,7 +1467,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                   </div>
 
                   {/* Martingale Auto Bot controls */}
-                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6">
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-6" style={{ fontFamily: 'Georgia' }}>
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <Bot className="w-4 h-4 text-cyan-400" />
@@ -1574,7 +1577,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 
                 {/* QR and share links block */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                  <div className="lg:col-span-2 p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6" style={{ fontFamily: 'Georgia' }}>
                     <h3 className="text-base font-bold text-white flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                       <Users className="w-5 h-5 text-[#ffd200]" />
                       Ваша реферальная конфигурация
@@ -1619,7 +1622,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                   </div>
 
                   {/* QR code representation */}
-                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl text-center flex flex-col items-center justify-center space-y-4">
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl text-center flex flex-col items-center justify-center space-y-4" style={{ fontFamily: 'Georgia' }}>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">QR-Код для листовки</h4>
                     
                     {/* Mock QR box representation */}
@@ -1636,7 +1639,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 </div>
 
                 {/* Team members list */}
-                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4" style={{ fontFamily: 'Georgia' }}>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">
                     Активные рефералы в вашей структуре
                   </h3>
@@ -1681,7 +1684,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
             {/* TAB 5: CALCULATOR */}
             {activeDashboardTab === 'calculator' && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6" style={{ fontFamily: 'Georgia' }}>
                 <div className="text-center">
                   <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Georgia' }}>Двунаправленный калькулятор конверсии</h3>
                   <p className="text-xs text-slate-400 mt-1">
@@ -1750,7 +1753,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
             {/* TAB 6: SETTINGS */}
             {activeDashboardTab === 'settings' && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-8">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-8" style={{ fontFamily: 'Georgia' }}>
                 
                 {/* Form parameters */}
                 <form onSubmit={handleUpdateProfile} className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
