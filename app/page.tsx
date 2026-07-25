@@ -170,6 +170,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     loyaltyPoints: number;
     tier: string;
     twoFactorEnabled: boolean;
+    lastMiningTimestamp?: number;
+    nextRollTimestamp?: number;
   } | null>(null);
 
   const [authModal, setAuthModal] = React.useState({
@@ -455,21 +457,33 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isLoggedIn]);
 
-  // Cooldown timer ticker for faucet claim
+  // Cooldown timer ticker for faucet claim (Real-time countdown)
   React.useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (rollStatus.cooldownSeconds > 0) {
-      interval = setInterval(() => {
+    const updateCooldown = () => {
+      if (currentUser?.nextRollTimestamp) {
+        const remaining = Math.max(0, Math.ceil((currentUser.nextRollTimestamp - Date.now()) / 1000));
         setRollStatus(prev => ({
           ...prev,
-          cooldownSeconds: prev.cooldownSeconds - 1
+          cooldownSeconds: remaining
         }));
-      }, 1000);
+      } else if (rollStatus.cooldownSeconds > 0) {
+        setRollStatus(prev => ({
+          ...prev,
+          cooldownSeconds: Math.max(0, prev.cooldownSeconds - 1)
+        }));
+      }
+    };
+
+    if (currentUser?.nextRollTimestamp || rollStatus.cooldownSeconds > 0) {
+      updateCooldown();
+      interval = setInterval(updateCooldown, 1000);
     }
+
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [rollStatus.cooldownSeconds]);
+  }, [currentUser?.nextRollTimestamp, rollStatus.cooldownSeconds]);
 
   // Live price simulator
   React.useEffect(() => {
@@ -515,7 +529,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           };
           syncUserToStorage(updated);
         } else if (rand < 0.45) {
-          // Passive mining yield (+1 satoshi every 20 seconds)
+          // Passive mining yield (+1 satoshi every 10 minutes)
           const updated = {
             ...currentUserRef.current!,
             balance: currentUserRef.current!.balance + 1,
@@ -523,7 +537,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           };
           syncUserToStorage(updated);
         }
-      }, 20000);
+      }, 600000);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -742,6 +756,9 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         else if (claims > 25) calculatedTier = 'Gold';
         else if (claims > 10) calculatedTier = 'Silver';
 
+        const now = Date.now();
+        const nextRollTime = now + 3600 * 1000; // 1 hour in real-time
+
         // Update balance
         const updatedUser = {
           ...currentUser,
@@ -749,7 +766,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           cumulativeClaims: claims,
           rollsCount: currentUser.rollsCount + 1,
           loyaltyPoints: loyalty,
-          tier: calculatedTier
+          tier: calculatedTier,
+          nextRollTimestamp: nextRollTime
         };
 
         setRollStatus(prev => ({
@@ -1240,7 +1258,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     <div className="flex flex-wrap gap-4 text-xs font-bold text-emerald-400 bg-emerald-400/5 border border-emerald-500/10 px-4 py-2.5 rounded-xl inline-flex">
                       <span className="flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                         <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                        Стейкинг-майнер запущен (1 сатоши в 20 секунд • Только при открытой вкладке)
+                        Стейкинг-майнер запущен (1 сатоши в 10 минут • Только при открытой вкладке)
                       </span>
                     </div>
                   </div>
@@ -1401,15 +1419,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                             Следующий сбор доступен через:
                           </div>
                           <div className="font-mono text-2xl font-extrabold text-white bg-white/5 border border-white/10 px-6 py-2.5 rounded-2xl tracking-widest inline-block">
-                            {Math.floor(rollStatus.cooldownSeconds / 60).toString().padStart(2, '0')} : {(rollStatus.cooldownSeconds % 60).toString().padStart(2, '0')}
-                          </div>
-                          <div>
-                            <button
-                              onClick={() => setRollStatus(prev => ({ ...prev, cooldownSeconds: 0 }))}
-                              className="text-[10px] text-orange-400 underline hover:text-white transition-colors"
-                            >
-                              [Демо] Сбросить таймер кулдауна
-                            </button>
+                            {Math.floor(rollStatus.cooldownSeconds / 3600).toString().padStart(2, '0')} : {Math.floor((rollStatus.cooldownSeconds % 3600) / 60).toString().padStart(2, '0')} : {(rollStatus.cooldownSeconds % 60).toString().padStart(2, '0')}
                           </div>
                         </div>
                       ) : (
