@@ -45,7 +45,9 @@ import {
   Eye,
   EyeOff,
   X,
-  Menu
+  Menu,
+  QrCode,
+  Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -499,14 +501,14 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           };
           syncUserToStorage(updated);
         } else if (rand < 0.45) {
-          // Passive mining yield (+1 satoshi)
+          // Passive mining yield (+1 satoshi every 10 seconds)
           const updated = {
             ...currentUserRef.current!,
             balance: currentUserRef.current!.balance + 1
           };
           syncUserToStorage(updated);
         }
-      }, 4000);
+      }, 10000);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -1178,7 +1180,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     <div className="flex flex-wrap gap-4 text-xs font-bold text-emerald-400 bg-emerald-400/5 border border-emerald-500/10 px-4 py-2.5 rounded-xl inline-flex">
                       <span className="flex items-center gap-1.5" style={{ fontFamily: 'Georgia' }}>
                         <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                        Стейкинг-майнер запущен (+1 SAT в секунды)
+                        Стейкинг-майнер запущен (1 сатоши в 10 секунд)
                       </span>
                     </div>
                   </div>
@@ -1717,19 +1719,127 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                   </div>
 
                   {/* QR code representation */}
-                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl text-center flex flex-col items-center justify-center space-y-4" style={{ fontFamily: 'Georgia' }}>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">QR-Код для листовки</h4>
+                  <div className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl text-center flex flex-col items-center justify-center space-y-5" style={{ fontFamily: 'Georgia' }}>
+                    <div className="flex items-center gap-2">
+                      <QrCode className="w-4 h-4 text-amber-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Уникальный QR-Код реферала</h4>
+                    </div>
                     
-                    {/* Mock QR box representation */}
-                    <div className="p-3 bg-white rounded-2xl inline-block shadow-lg">
-                      <div className="w-32 h-32 bg-slate-900 rounded flex items-center justify-center text-3xl font-black text-white selection:bg-transparent">
-                        📱 QR
+                    {/* Beautiful QR box representation */}
+                    <div className="p-4 bg-gradient-to-b from-amber-500/20 via-orange-500/10 to-slate-900 border border-amber-500/30 rounded-3xl shadow-2xl relative group">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-500" />
+                      <div className="relative p-3 bg-slate-950 rounded-2xl border border-white/10 flex flex-col items-center justify-center">
+                        <svg className="w-40 h-40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          {/* Dark rounded background */}
+                          <rect width="100" height="100" rx="10" fill="#030712" />
+                          
+                          {/* Finder Pattern 1 (Top Left) */}
+                          <rect x="8" y="8" width="26" height="26" rx="6" fill="#f59e0b" />
+                          <rect x="12" y="12" width="18" height="18" rx="4" fill="#030712" />
+                          <rect x="16" y="16" width="10" height="10" rx="2" fill="#f59e0b" />
+
+                          {/* Finder Pattern 2 (Top Right) */}
+                          <rect x="66" y="8" width="26" height="26" rx="6" fill="#f59e0b" />
+                          <rect x="70" y="12" width="18" height="18" rx="4" fill="#030712" />
+                          <rect x="74" y="16" width="10" height="10" rx="2" fill="#f59e0b" />
+
+                          {/* Finder Pattern 3 (Bottom Left) */}
+                          <rect x="8" y="66" width="26" height="26" rx="6" fill="#f59e0b" />
+                          <rect x="12" y="70" width="18" height="18" rx="4" fill="#030712" />
+                          <rect x="16" y="74" width="10" height="10" rx="2" fill="#f59e0b" />
+
+                          {/* Matrix Data Modules */}
+                          <circle cx="40" cy="11" r="2.2" fill="#cbd5e1" />
+                          <circle cx="47" cy="11" r="2.2" fill="#f59e0b" />
+                          <circle cx="54" cy="11" r="2.2" fill="#f59e0b" />
+                          <circle cx="60" cy="11" r="2.2" fill="#cbd5e1" />
+
+                          <circle cx="40" cy="18" r="2.2" fill="#f59e0b" />
+                          <circle cx="47" cy="18" r="2.2" fill="#cbd5e1" />
+                          <circle cx="54" cy="18" r="2.2" fill="#cbd5e1" />
+                          <circle cx="60" cy="18" r="2.2" fill="#f59e0b" />
+
+                          <circle cx="40" cy="25" r="2.2" fill="#cbd5e1" />
+                          <circle cx="47" cy="25" r="2.2" fill="#f59e0b" />
+                          <circle cx="54" cy="25" r="2.2" fill="#cbd5e1" />
+                          <circle cx="60" cy="25" r="2.2" fill="#cbd5e1" />
+
+                          <circle cx="11" cy="40" r="2.2" fill="#cbd5e1" />
+                          <circle cx="18" cy="40" r="2.2" fill="#f59e0b" />
+                          <circle cx="25" cy="40" r="2.2" fill="#cbd5e1" />
+                          <circle cx="32" cy="40" r="2.2" fill="#cbd5e1" />
+                          <circle cx="40" cy="40" r="2.2" fill="#cbd5e1" />
+                          <circle cx="60" cy="40" r="2.2" fill="#f59e0b" />
+                          <circle cx="67" cy="40" r="2.2" fill="#cbd5e1" />
+                          <circle cx="75" cy="40" r="2.2" fill="#cbd5e1" />
+                          <circle cx="82" cy="40" r="2.2" fill="#f59e0b" />
+                          <circle cx="89" cy="40" r="2.2" fill="#cbd5e1" />
+
+                          <circle cx="11" cy="47" r="2.2" fill="#f59e0b" />
+                          <circle cx="25" cy="47" r="2.2" fill="#cbd5e1" />
+                          <circle cx="32" cy="47" r="2.2" fill="#f59e0b" />
+                          <circle cx="67" cy="47" r="2.2" fill="#f59e0b" />
+                          <circle cx="75" cy="47" r="2.2" fill="#cbd5e1" />
+                          <circle cx="82" cy="47" r="2.2" fill="#cbd5e1" />
+                          <circle cx="89" cy="47" r="2.2" fill="#f59e0b" />
+
+                          <circle cx="18" cy="54" r="2.2" fill="#cbd5e1" />
+                          <circle cx="25" cy="54" r="2.2" fill="#cbd5e1" />
+                          <circle cx="32" cy="54" r="2.2" fill="#cbd5e1" />
+                          <circle cx="67" cy="54" r="2.2" fill="#cbd5e1" />
+                          <circle cx="75" cy="54" r="2.2" fill="#f59e0b" />
+                          <circle cx="82" cy="54" r="2.2" fill="#cbd5e1" />
+                          <circle cx="89" cy="54" r="2.2" fill="#cbd5e1" />
+
+                          <circle cx="40" cy="60" r="2.2" fill="#f59e0b" />
+                          <circle cx="47" cy="60" r="2.2" fill="#cbd5e1" />
+                          <circle cx="54" cy="60" r="2.2" fill="#cbd5e1" />
+                          <circle cx="60" cy="60" r="2.2" fill="#f59e0b" />
+
+                          <circle cx="40" cy="67" r="2.2" fill="#cbd5e1" />
+                          <circle cx="54" cy="67" r="2.2" fill="#f59e0b" />
+                          <circle cx="67" cy="67" r="2.2" fill="#f59e0b" />
+                          <circle cx="75" cy="67" r="2.2" fill="#cbd5e1" />
+                          <circle cx="82" cy="67" r="2.2" fill="#f59e0b" />
+                          <circle cx="89" cy="67" r="2.2" fill="#cbd5e1" />
+
+                          <circle cx="40" cy="75" r="2.2" fill="#f59e0b" />
+                          <circle cx="47" cy="75" r="2.2" fill="#cbd5e1" />
+                          <circle cx="60" cy="75" r="2.2" fill="#cbd5e1" />
+                          <circle cx="67" cy="75" r="2.2" fill="#cbd5e1" />
+                          <circle cx="82" cy="75" r="2.2" fill="#cbd5e1" />
+                          <circle cx="89" cy="75" r="2.2" fill="#f59e0b" />
+
+                          <circle cx="40" cy="82" r="2.2" fill="#cbd5e1" />
+                          <circle cx="54" cy="82" r="2.2" fill="#f59e0b" />
+                          <circle cx="67" cy="82" r="2.2" fill="#f59e0b" />
+                          <circle cx="75" cy="82" r="2.2" fill="#cbd5e1" />
+                          <circle cx="89" cy="82" r="2.2" fill="#cbd5e1" />
+
+                          <circle cx="47" cy="89" r="2.2" fill="#f59e0b" />
+                          <circle cx="60" cy="89" r="2.2" fill="#cbd5e1" />
+                          <circle cx="75" cy="89" r="2.2" fill="#f59e0b" />
+                          <circle cx="82" cy="89" r="2.2" fill="#cbd5e1" />
+
+                          {/* Center Emblem */}
+                          <rect x="36" y="36" width="28" height="28" rx="8" fill="#030712" stroke="#f59e0b" strokeWidth="2" />
+                          <text x="50" y="55" fontSize="16" fontWeight="bold" fill="#f59e0b" textAnchor="middle" fontFamily="Georgia, serif">₿</text>
+                        </svg>
                       </div>
                     </div>
 
-                    <p className="text-[10px] text-[#80809a] max-w-xs">
-                      Сканируя QR, партнеры мгновенно перейдут на этот информационный лендинг по вашей реферальной ссылке.
+                    <p className="text-[10px] text-slate-400 max-w-xs leading-relaxed">
+                      Сканируя QR-код, партнеры мгновенно перейдут на этот лендинг по вашей реферальной ссылке.
                     </p>
+
+                    <button
+                      onClick={() => {
+                        alert('QR-код готов к печати и сохранению!');
+                      }}
+                      className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Скачать QR для печати
+                    </button>
                   </div>
                 </div>
 
