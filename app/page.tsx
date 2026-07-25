@@ -151,7 +151,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = React.useState(false);
   const [dashboardTheme, setDashboardTheme] = React.useState<'gold' | 'cyan' | 'purple' | 'emerald'>('gold');
-  const [activeDashboardTab, setActiveDashboardTab] = React.useState<'overview' | 'faucet' | 'multiply' | 'referrals' | 'calculator' | 'settings'>('overview');
+  const [activeDashboardTab, setActiveDashboardTab] = React.useState<'overview' | 'faucet' | 'multiply' | 'referrals' | 'calculator' | 'payouts' | 'settings'>('overview');
   const [isMobileLandingMenuOpen, setIsMobileLandingMenuOpen] = React.useState(false);
   const [isMobileDashboardMenuOpen, setIsMobileDashboardMenuOpen] = React.useState(false);
   
@@ -243,6 +243,90 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [calcSatoshi, setCalcSatoshi] = React.useState('10000');
   const [calcBtc, setCalcBtc] = React.useState('0.00010000');
   const [calcUsd, setCalcUsd] = React.useState('5.84');
+
+  // --- PAYOUTS / WITHDRAWAL STATE ---
+  const [payoutSpeed, setPayoutSpeed] = React.useState<'auto' | 'slow' | 'instant'>('auto');
+  const [withdrawAmount, setWithdrawAmount] = React.useState('30000');
+  const [payoutStatus, setPayoutStatus] = React.useState<{ success?: boolean; message?: string } | null>(null);
+  const [payoutHistory, setPayoutHistory] = React.useState<Array<{
+    id: string;
+    amount: number;
+    fee: number;
+    address: string;
+    date: string;
+    status: 'Завершен' | 'В обработке' | 'Отменен';
+    txid: string;
+  }>>([
+    {
+      id: 'tx_98124',
+      amount: 45000,
+      fee: 0,
+      address: 'bc1qxy2kg3ut7v6396t88372864839201019183',
+      date: '2026-07-22 14:30',
+      status: 'Завершен',
+      txid: '7f9a81c028e3b1...4a89'
+    },
+    {
+      id: 'tx_87102',
+      amount: 32000,
+      fee: 1000,
+      address: 'bc1qxy2kg3ut7v6396t88372864839201019183',
+      date: '2026-07-15 09:12',
+      status: 'Завершен',
+      txid: '3b2e91a84f010c...81d3'
+    }
+  ]);
+
+  const handleRequestPayout = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    const amountNum = parseInt(withdrawAmount, 10);
+    const minWithdrawal = 30000;
+    
+    if (isNaN(amountNum) || amountNum < minWithdrawal) {
+      setPayoutStatus({
+        success: false,
+        message: `Минимальная сумма вывода составляет ${minWithdrawal.toLocaleString('en-US')} SAT`
+      });
+      return;
+    }
+
+    if (amountNum > currentUser.balance) {
+      setPayoutStatus({
+        success: false,
+        message: 'Недостаточно средств на балансе для совершения выплаты'
+      });
+      return;
+    }
+
+    let fee = 0;
+    if (payoutSpeed === 'slow') fee = 1000;
+    if (payoutSpeed === 'instant') fee = 5000;
+
+    const totalDeduct = amountNum;
+    const updatedUser = { ...currentUser, balance: currentUser.balance - totalDeduct };
+    syncUserToStorage(updatedUser);
+
+    const now = new Date();
+    const timestamp = now.getTime();
+    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newTx = {
+      id: `tx_${timestamp.toString().slice(-5)}`,
+      amount: amountNum - fee,
+      fee,
+      address: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
+      date: formattedDate,
+      status: payoutSpeed === 'instant' ? ('Завершен' as const) : ('В обработке' as const),
+      txid: `${timestamp.toString(16)}...8f2a`
+    };
+
+    setPayoutHistory(prev => [newTx, ...prev]);
+    setPayoutStatus({
+      success: true,
+      message: `Заявка на вывод ${amountNum.toLocaleString('en-US')} SAT успешно сформирована!`
+    });
+  };
 
   // --- REFS FOR AUTO-BOT RUNNING ---
   const multiplyBetRef = React.useRef(multiplyBet);
@@ -996,6 +1080,16 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 <span style={{ fontFamily: 'Georgia' }}>Конвертер сатоши</span>
               </button>
               <button
+                onClick={() => { setIsBotRunning(false); setActiveDashboardTab('payouts'); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                  activeDashboardTab === 'payouts' ? "bg-white/5 text-white border-l-2 border-orange-500" : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+                )}
+              >
+                <Wallet className="w-4 h-4 text-amber-400" />
+                <span style={{ fontFamily: 'Georgia' }}>Выплаты</span>
+              </button>
+              <button
                 onClick={() => { setIsBotRunning(false); setActiveDashboardTab('settings'); }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all",
@@ -1040,6 +1134,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 {activeDashboardTab === 'multiply' && '📈 Игра HI-LO Multiplier'}
                 {activeDashboardTab === 'referrals' && '🤝 Партнерский центр'}
                 {activeDashboardTab === 'calculator' && '🧮 Криптокалькулятор'}
+                {activeDashboardTab === 'payouts' && '💸 Выплаты и Вывод средств'}
                 {activeDashboardTab === 'settings' && '⚙️ Настройки и Безопасность'}
               </h1>
             </div>
@@ -1748,6 +1843,191 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl text-[11px] text-slate-400 text-center leading-relaxed">
                   💰 Расчет произведен на основе динамического симулированного курса <span className="text-white font-bold">${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })} за 1 BTC</span>.
                 </div>
+              </motion.div>
+            )}
+
+            {/* TAB: PAYOUTS */}
+            {activeDashboardTab === 'payouts' && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8" style={{ fontFamily: 'Georgia' }}>
+                
+                {/* Balance and Wallet overview header card */}
+                <div className="p-6 bg-gradient-to-r from-orange-500/10 via-amber-400/5 to-transparent border border-orange-500/20 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                  <div>
+                    <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1" style={{ fontFamily: 'Georgia' }}>Доступно к выводу</div>
+                    <div className="text-2xl font-black text-white font-mono flex items-baseline gap-2">
+                      <span className="text-orange-400 font-sans">₿</span>
+                      <span style={{ fontFamily: 'Verdana' }}>{currentUser?.balance.toLocaleString('en-US')}</span>
+                      <span className="text-xs text-slate-400 font-normal font-sans">SAT</span>
+                    </div>
+                    <div className="text-[11px] text-emerald-400 font-bold mt-1" style={{ fontFamily: 'Verdana' }}>
+                      ≈ ${((currentUser?.balance || 0) / 100000000 * btcPrice).toFixed(2)} USD
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-1.5">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                      <span>Адрес получения выплат (Bitcoin Wallet)</span>
+                      <span className="text-emerald-400 font-normal">Подтвержден</span>
+                    </div>
+                    <div className="font-mono text-xs text-amber-300 font-bold truncate bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      {currentUser?.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form to Request Withdrawal */}
+                <div className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
+                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-2 flex items-center gap-2" style={{ fontFamily: 'Georgia' }}>
+                    <Wallet className="w-5 h-5 text-amber-400" />
+                    Заявка на вывод средств
+                  </h3>
+
+                  {payoutStatus && (
+                    <div className={cn(
+                      "p-4 rounded-2xl border text-xs font-bold leading-relaxed",
+                      payoutStatus.success ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300" : "bg-rose-500/10 border-rose-500/20 text-rose-300"
+                    )}>
+                      {payoutStatus.message}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleRequestPayout} className="space-y-6">
+                    {/* Speed options */}
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Режим обработки выплаты</label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setPayoutSpeed('auto')}
+                          className={cn(
+                            "p-4 rounded-2xl border text-left transition-all space-y-1.5",
+                            payoutSpeed === 'auto' ? "bg-orange-500/15 border-orange-500/40 text-white" : "bg-white/[0.01] border-white/5 text-slate-400 hover:border-white/10"
+                          )}
+                        >
+                          <div className="text-xs font-bold text-white flex items-center justify-between">
+                            <span>AUTO (Еженедельный)</span>
+                            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">0 SAT комиссия</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">Автоматически каждое воскресенье при балансе &gt; 30,000 SAT</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPayoutSpeed('slow')}
+                          className={cn(
+                            "p-4 rounded-2xl border text-left transition-all space-y-1.5",
+                            payoutSpeed === 'slow' ? "bg-orange-500/15 border-orange-500/40 text-white" : "bg-white/[0.01] border-white/5 text-slate-400 hover:border-white/10"
+                          )}
+                        >
+                          <div className="text-xs font-bold text-white flex items-center justify-between">
+                            <span>SLOW (Стандарт)</span>
+                            <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">1,000 SAT</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">Обработка в течение 6 - 24 часов на указанный биткоин-кошелек</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPayoutSpeed('instant')}
+                          className={cn(
+                            "p-4 rounded-2xl border text-left transition-all space-y-1.5",
+                            payoutSpeed === 'instant' ? "bg-orange-500/15 border-orange-500/40 text-white" : "bg-white/[0.01] border-white/5 text-slate-400 hover:border-white/10"
+                          )}
+                        >
+                          <div className="text-xs font-bold text-white flex items-center justify-between">
+                            <span>INSTANT (Мгновенный)</span>
+                            <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">5,000 SAT</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">Мгновенная отправка транзакции в сеть Bitcoin в течение 15 минут</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Amount input */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <label className="text-slate-400 font-bold uppercase tracking-wider">Сумма вывода (SAT)</label>
+                        <button
+                          type="button"
+                          onClick={() => setWithdrawAmount((currentUser?.balance || 0).toString())}
+                          className="text-orange-400 hover:underline font-bold"
+                        >
+                          Вывести все средства ({currentUser?.balance.toLocaleString('en-US')} SAT)
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={withdrawAmount}
+                          onChange={(e) => setWithdrawAmount(e.target.value)}
+                          min="30000"
+                          placeholder="Мин. 30,000 SAT"
+                          className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-orange-500/50"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
+                          ≈ ${(((parseInt(withdrawAmount, 10) || 0) / 100000000) * btcPrice).toFixed(2)} USD
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 hover:from-orange-400 hover:to-yellow-300 text-slate-950 font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
+                    >
+                      <ArrowUpRight className="w-5 h-5" />
+                      Запросить выплату средств
+                    </button>
+                  </form>
+                </div>
+
+                {/* Transaction history table */}
+                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">
+                    История транзакций выплат
+                  </h3>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
+                          <th className="pb-3 font-bold">ID / Дата</th>
+                          <th className="pb-3 font-bold">Сумма</th>
+                          <th className="pb-3 font-bold">Комиссия</th>
+                          <th className="pb-3 font-bold">Статус</th>
+                          <th className="pb-3 font-bold text-right">Хеш TXID</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {payoutHistory.map((tx) => (
+                          <tr key={tx.id} className="hover:bg-white/[0.01]">
+                            <td className="py-3 font-mono">
+                              <div className="text-white font-bold">{tx.id}</div>
+                              <div className="text-[10px] text-slate-500" style={{ fontFamily: 'Verdana' }}>{tx.date}</div>
+                            </td>
+                            <td className="py-3 font-mono font-bold text-amber-300" style={{ fontFamily: 'Verdana' }}>
+                              {tx.amount.toLocaleString('en-US')} SAT
+                            </td>
+                            <td className="py-3 font-mono text-slate-400" style={{ fontFamily: 'Verdana' }}>
+                              {tx.fee.toLocaleString('en-US')} SAT
+                            </td>
+                            <td className="py-3">
+                              <span className={cn(
+                                "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                tx.status === 'Завершен' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              )}>
+                                {tx.status}
+                              </span>
+                            </td>
+                            <td className="py-3 font-mono text-right text-slate-400 text-[11px]">
+                              {tx.txid}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </motion.div>
             )}
 
