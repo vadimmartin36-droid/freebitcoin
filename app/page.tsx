@@ -262,11 +262,21 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         refreshAdminUsersList();
         refreshAdminPayoutNotifications();
       }
+      if (!e.key || e.key === 'freebitco_extra_paid_out') {
+        const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+        setTotalPaidOut(BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra));
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     const syncInterval = setInterval(() => {
       refreshAdminUsersList();
       refreshAdminPayoutNotifications();
+      
+      const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+      setTotalPaidOut(prev => {
+        const newVal = BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra);
+        return prev !== newVal ? newVal : prev;
+      });
       
       const session = localStorage.getItem('freebitco_session');
       if (session) {
@@ -319,9 +329,9 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     }
 
     if (approvedNotif?.amountSat) {
-      const btcAmount = approvedNotif.amountSat / 100000000;
+      const usdAmount = (approvedNotif.amountSat / 100000000) * btcPrice;
       const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
-      const newExtra = currentExtra + btcAmount;
+      const newExtra = currentExtra + usdAmount;
       localStorage.setItem('freebitco_extra_paid_out', newExtra.toString());
       setTotalPaidOut(BASE_PAID_OUT + newExtra);
     }
@@ -361,6 +371,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         setPayoutHistory(finalHist);
       }
     }
+      
 
     const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
     const updatedAccounts = accounts.map((acc: any) => {
@@ -614,11 +625,13 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     }, ...prev]);
 
     // Record real withdrawal sum added to total paid out counter
-    const withdrawnUsd = ((amountNum - fee) / 100000000) * btcPrice;
-    const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
-    const newExtra = (isNaN(currentExtra) ? 0 : currentExtra) + withdrawnUsd;
-    localStorage.setItem('freebitco_extra_paid_out', newExtra.toString());
-    setTotalPaidOut(BASE_PAID_OUT + newExtra);
+    if (payoutSpeed === 'instant') {
+      const withdrawnUsd = ((amountNum - fee) / 100000000) * btcPrice;
+      const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+      const newExtra = (isNaN(currentExtra) ? 0 : currentExtra) + withdrawnUsd;
+      localStorage.setItem('freebitco_extra_paid_out', newExtra.toString());
+      setTotalPaidOut(BASE_PAID_OUT + newExtra);
+    }
 
     setPayoutStatus({
       success: true,
