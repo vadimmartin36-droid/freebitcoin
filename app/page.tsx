@@ -142,17 +142,12 @@ function CountUp({ target, duration = 2000, suffix = '', prefix = '', decimals =
 }
 
 // Real-time continuous payouts counter helper
-const BASE_ANCHOR_TIME = 1784937600000;
-const BASE_PAID_OUT = 100.00;
+const BASE_PAID_OUT = 151.35;
 
 function calculateCurrentTotalPaidOut(): number {
   if (typeof window === 'undefined') return BASE_PAID_OUT;
-  const now = Date.now();
-  const elapsedMs = Math.max(0, now - BASE_ANCHOR_TIME);
-  // Continuous real-time growth ($0.01 every 30 seconds = $0.000333 per second)
-  const timeGrowth = (elapsedMs / 30000) * 0.01;
   const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
-  return BASE_PAID_OUT + timeGrowth + (isNaN(storedExtra) ? 0 : storedExtra);
+  return BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra);
 }
 
 export default function Home({ initialDashboardOpen = false }: { initialDashboardOpen?: boolean }) {
@@ -162,13 +157,13 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [btcPrice, setBtcPrice] = React.useState<number>(97500.00);
   const [btc24hChange, setBtc24hChange] = React.useState<number>(1.85);
   const [btcTrend, setBtcTrend] = React.useState<'up' | 'down'>('up');
-  const [totalPaidOut, setTotalPaidOut] = React.useState<number>(100.00);
+  const [totalPaidOut, setTotalPaidOut] = React.useState<number>(151.35);
 
   // --- AUTHENTICATION & CABINET STATE ---
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = React.useState(false);
   const [dashboardTheme, setDashboardTheme] = React.useState<'gold' | 'cyan' | 'purple' | 'emerald'>('gold');
-  const [activeDashboardTab, setActiveDashboardTab] = React.useState<'overview' | 'faucet' | 'multiply' | 'referrals' | 'calculator' | 'payouts' | 'settings'>('overview');
+  const [activeDashboardTab, setActiveDashboardTab] = React.useState<'overview' | 'faucet' | 'multiply' | 'referrals' | 'calculator' | 'payouts' | 'settings' | 'admin'>('overview');
   const [isMobileLandingMenuOpen, setIsMobileLandingMenuOpen] = React.useState(false);
   const [isMobileDashboardMenuOpen, setIsMobileDashboardMenuOpen] = React.useState(false);
   
@@ -187,7 +182,28 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     twoFactorEnabled: boolean;
     lastMiningTimestamp?: number;
     nextRollTimestamp?: number;
+    isAdmin?: boolean;
   } | null>(null);
+
+  // --- ADMIN PANEL STATE ---
+  const [adminUsersList, setAdminUsersList] = React.useState<any[]>([]);
+  const [adminBroadcastMsg, setAdminBroadcastMsg] = React.useState<string>('');
+  const [adminLog, setAdminLog] = React.useState<Array<{ id: number; time: string; text: string; type: 'info' | 'user' | 'system' }>>([
+    { id: 1, time: '18:42', text: 'Админ-панель инициализирована. Система работает штатно.', type: 'system' },
+    { id: 2, time: '18:40', text: 'Резервная копия структуры пользователей обновлена в LocalStorage.', type: 'info' }
+  ]);
+
+  const refreshAdminUsersList = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+    setAdminUsersList(accounts);
+  }, []);
+
+  React.useEffect(() => {
+    if (activeDashboardTab === 'admin') {
+      refreshAdminUsersList();
+    }
+  }, [activeDashboardTab, refreshAdminUsersList]);
 
   const [authModal, setAuthModal] = React.useState({
     isOpen: false,
@@ -344,6 +360,14 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     };
 
     setPayoutHistory(prev => [newTx, ...prev]);
+
+    // Record real withdrawal sum added to total paid out counter
+    const withdrawnUsd = ((amountNum - fee) / 100000000) * btcPrice;
+    const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+    const newExtra = (isNaN(currentExtra) ? 0 : currentExtra) + withdrawnUsd;
+    localStorage.setItem('freebitco_extra_paid_out', newExtra.toString());
+    setTotalPaidOut(BASE_PAID_OUT + newExtra);
+
     setPayoutStatus({
       success: true,
       message: `Заявка на вывод ${amountNum.toLocaleString('en-US')} SAT успешно сформирована!`
@@ -394,7 +418,24 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             rollsCount: 4,
             loyaltyPoints: 120,
             tier: 'Bronze',
-            twoFactorEnabled: false
+            twoFactorEnabled: false,
+            isAdmin: true
+          },
+          {
+            email: 'admin@freebitco.io',
+            password: 'admin',
+            name: 'Главный Администратор',
+            avatar: 'https://picsum.photos/seed/admin/100/100',
+            wallet: 'bc1qadmin99999999999999999999999999999',
+            refId: 'admin1',
+            refShare: 50,
+            balance: 5000000,
+            cumulativeClaims: 150,
+            rollsCount: 150,
+            loyaltyPoints: 5000,
+            tier: 'Platinum',
+            twoFactorEnabled: true,
+            isAdmin: true
           }
         ];
         localStorage.setItem('freebitco_accounts', JSON.stringify(defaultAccounts));
@@ -416,7 +457,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             } else {
               setIdleModalOpen(true);
             }
-            let finalUser = { ...user, lastMiningTimestamp: now };
+            const isUserAdmin = user.isAdmin ?? (user.email === 'demo@freebitco.io' || user.email.toLowerCase().includes('admin'));
+            let finalUser = { ...user, isAdmin: isUserAdmin, lastMiningTimestamp: now };
             setCurrentUser(finalUser);
             syncUserToStorage(finalUser);
             setIsLoggedIn(true);
@@ -564,20 +606,13 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     };
   }, []);
 
-  // Real-time continuous growth for payouts counter calculated against fixed time anchor
+  // Sync total paid out counter from storage on mount (base $151.35)
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setTotalPaidOut(calculateCurrentTotalPaidOut());
     }, 0);
 
-    const interval = setInterval(() => {
-      setTotalPaidOut(calculateCurrentTotalPaidOut());
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   // Live Earning simulator representing active referrals rolling & passive mining
@@ -858,13 +893,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           cooldownSeconds: 3600 // 1 hour
         }));
 
-        // Increment extra paid out counter in localStorage
-        const satInUsd = (reward / 100000000) * btcPrice;
-        const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
-        localStorage.setItem('freebitco_extra_paid_out', (currentExtra + satInUsd).toString());
-
         syncUserToStorage(updatedUser);
-        setTotalPaidOut(calculateCurrentTotalPaidOut());
       }
     }, 80);
   };
@@ -1264,6 +1293,27 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 <Settings className="w-4 h-4 text-purple-400" />
                 <span style={{ fontFamily: 'Georgia' }}>Настройки кабинета</span>
               </button>
+
+              {/* ADMIN PANEL MENU ITEM */}
+              {(currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email === 'demo@freebitco.io') && (
+                <button
+                  onClick={() => { setIsBotRunning(false); setActiveDashboardTab('admin'); }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold tracking-wide transition-all border mt-2",
+                    activeDashboardTab === 'admin' 
+                      ? "bg-amber-500/15 text-amber-300 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.25)] font-bold" 
+                      : "bg-amber-500/5 text-amber-400/90 border-amber-500/20 hover:text-amber-300 hover:bg-amber-500/10"
+                  )}
+                >
+                  <span className="flex items-center gap-3">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <span style={{ fontFamily: 'Georgia' }}>Панель администратора</span>
+                  </span>
+                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-amber-500/30">
+                    Admin
+                  </span>
+                </button>
+              )}
             </nav>
           </div>
 
@@ -1301,6 +1351,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 {activeDashboardTab === 'calculator' && '🧮 Криптокалькулятор'}
                 {activeDashboardTab === 'payouts' && '💸 Выплаты и Вывод средств'}
                 {activeDashboardTab === 'settings' && '⚙️ Настройки и Безопасность'}
+                {activeDashboardTab === 'admin' && '🛡️ Панель администратора'}
               </h1>
             </div>
 
@@ -2450,6 +2501,334 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     >
                       {currentUser.twoFactorEnabled ? 'Активировано (Выключить)' : 'Деактивировано (Включить)'}
                     </button>
+                  </div>
+                </div>
+
+              </motion.div>
+            )}
+
+            {/* TAB 7: ADMIN PANEL */}
+            {activeDashboardTab === 'admin' && (currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email === 'demo@freebitco.io') && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8" style={{ fontFamily: 'Georgia' }}>
+                
+                {/* Admin Header Banner */}
+                <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-transparent border border-amber-500/30 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                  <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
+                    <div>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full font-extrabold uppercase tracking-widest mb-3 inline-block">
+                        🛡️ Полный доступ
+                      </span>
+                      <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-1">
+                        Панель администратора
+                      </h2>
+                      <p className="text-xs text-slate-400">
+                        Центр управления платформой BitBonusHub. Управление пользователями, балансами, курсом BTC и анонсом в трансляцию.
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 bg-slate-950/80 border border-amber-500/30 px-4 py-2.5 rounded-2xl text-xs font-mono font-bold text-amber-300 shrink-0">
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      <span>Статус: Администратор</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Platform Metrics Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="p-5 bg-white/[0.02] border border-amber-500/20 rounded-2xl">
+                    <div className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">Всего аккаунтов</div>
+                    <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-2">
+                      <Users className="w-5 h-5 text-amber-400" />
+                      <span style={{ fontFamily: 'Verdana' }}>{adminUsersList.length || 1}</span>
+                    </div>
+                    <div className="text-[10px] text-emerald-400 mt-1 font-mono">Все профили активны</div>
+                  </div>
+
+                  <div className="p-5 bg-white/[0.02] border border-amber-500/20 rounded-2xl">
+                    <div className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">Курс BTC / USD</div>
+                    <div className="font-display font-black text-2xl text-white tracking-tight flex items-baseline gap-1.5">
+                      <span className="text-orange-400">$</span>
+                      <span style={{ fontFamily: 'Verdana' }}>{btcPrice.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 font-mono">Реальный зафиксированный курс</div>
+                  </div>
+
+                  <div className="p-5 bg-white/[0.02] border border-amber-500/20 rounded-2xl">
+                    <div className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">Счетчик выплат</div>
+                    <div className="font-display font-black text-2xl text-emerald-400 tracking-tight flex items-baseline gap-1.5">
+                      <DollarSign className="w-5 h-5" />
+                      <span style={{ fontFamily: 'Verdana' }}>{totalPaidOut.toFixed(2)}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 font-mono">Базовый фиксированный счетчик</div>
+                  </div>
+
+                  <div className="p-5 bg-white/[0.02] border border-amber-500/20 rounded-2xl">
+                    <div className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">Состояние сервера</div>
+                    <div className="font-display font-black text-2xl text-cyan-400 tracking-tight flex items-baseline gap-1.5">
+                      <Activity className="w-5 h-5" />
+                      <span style={{ fontFamily: 'Verdana' }}>100% OK</span>
+                    </div>
+                    <div className="text-[10px] text-emerald-400 mt-1 font-mono">Все сервисы онлайн</div>
+                  </div>
+                </div>
+
+                {/* Section 1: User Management Table */}
+                <div className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/10 rounded-3xl space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Users className="w-5 h-5 text-amber-400" />
+                        Управление пользователями системы ({adminUsersList.length})
+                      </h3>
+                      <p className="text-xs text-slate-400">Просмотр, редактирование балансов, выплат и прав пользователей.</p>
+                    </div>
+                    <button
+                      onClick={refreshAdminUsersList}
+                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                      Обновить список
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
+                          <th className="pb-3 font-bold">Пользователь</th>
+                          <th className="pb-3 font-bold">Роль</th>
+                          <th className="pb-3 font-bold">Баланс (SAT)</th>
+                          <th className="pb-3 font-bold">Уровень</th>
+                          <th className="pb-3 font-bold">Claims</th>
+                          <th className="pb-3 font-bold text-right">Действия админа</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {adminUsersList.map((u: any, idx: number) => (
+                          <tr key={u.email || idx} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 font-mono">
+                              <div className="flex items-center gap-2.5">
+                                <img src={u.avatar || 'https://picsum.photos/seed/avatar1/100/100'} alt="" className="w-7 h-7 rounded-lg object-cover border border-white/10" />
+                                <div>
+                                  <div className="text-white font-bold text-xs">{u.name}</div>
+                                  <div className="text-[10px] text-slate-400">{u.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
+                                u.isAdmin ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400"
+                              )}>
+                                {u.isAdmin ? '👑 ADMIN' : 'USER'}
+                              </span>
+                            </td>
+                            <td className="py-3 font-mono font-bold text-amber-300" style={{ fontFamily: 'Verdana' }}>
+                              {u.balance?.toLocaleString('en-US') || 0} SAT
+                            </td>
+                            <td className="py-3">
+                              <span className="px-2 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-bold">
+                                {u.tier || 'Bronze'}
+                              </span>
+                            </td>
+                            <td className="py-3 font-mono text-slate-300" style={{ fontFamily: 'Verdana' }}>
+                              {u.cumulativeClaims || 0}
+                            </td>
+                            <td className="py-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Add +10k SAT */}
+                                <button
+                                  onClick={() => {
+                                    const updated = adminUsersList.map((usr: any) => {
+                                      if (usr.email === u.email) {
+                                        return { ...usr, balance: (usr.balance || 0) + 10000 };
+                                      }
+                                      return usr;
+                                    });
+                                    localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                                    setAdminUsersList(updated);
+                                    if (currentUser.email === u.email) {
+                                      setCurrentUser({ ...currentUser, balance: currentUser.balance + 10000 });
+                                    }
+                                    setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Начислено +10,000 SAT пользователю ${u.email}`, type: 'user' }, ...prev]);
+                                  }}
+                                  className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold transition-all"
+                                >
+                                  +10k SAT
+                                </button>
+
+                                {/* Toggle Admin role */}
+                                <button
+                                  onClick={() => {
+                                    const updated = adminUsersList.map((usr: any) => {
+                                      if (usr.email === u.email) {
+                                        return { ...usr, isAdmin: !usr.isAdmin };
+                                      }
+                                      return usr;
+                                    });
+                                    localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                                    setAdminUsersList(updated);
+                                    if (currentUser.email === u.email) {
+                                      setCurrentUser({ ...currentUser, isAdmin: !currentUser.isAdmin });
+                                    }
+                                    setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Изменена роль пользователя ${u.email}`, type: 'user' }, ...prev]);
+                                  }}
+                                  className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 rounded-lg text-[10px] font-bold transition-all"
+                                >
+                                  {u.isAdmin ? 'Снять Admin' : 'Сделать Admin'}
+                                </button>
+
+                                {/* Set Platinum tier */}
+                                <button
+                                  onClick={() => {
+                                    const updated = adminUsersList.map((usr: any) => {
+                                      if (usr.email === u.email) {
+                                        return { ...usr, tier: 'Platinum', cumulativeClaims: 100 };
+                                      }
+                                      return usr;
+                                    });
+                                    localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                                    setAdminUsersList(updated);
+                                    if (currentUser.email === u.email) {
+                                      setCurrentUser({ ...currentUser, tier: 'Platinum', cumulativeClaims: 100 });
+                                    }
+                                    setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Присвоен статус Platinum пользователю ${u.email}`, type: 'user' }, ...prev]);
+                                  }}
+                                  className="px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 rounded-lg text-[10px] font-bold transition-all"
+                                >
+                                  Platinum
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Section 2: Platform Controls & Broadcast */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Broadcast Message to Live Activity Feed */}
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                      <Bell className="w-4 h-4" />
+                      Отправить симуляцию уведомления в живой лог
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Сообщение появится у всех посетителей в «Живом логе активности партнера».
+                    </p>
+
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={adminBroadcastMsg}
+                        onChange={(e) => setAdminBroadcastMsg(e.target.value)}
+                        placeholder="Например: Пользователь admin@freebitco.io вывел 150,000 SAT на свой кошелек!"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!adminBroadcastMsg.trim()) return;
+                          const newNote = {
+                            id: Date.now(),
+                            text: adminBroadcastMsg,
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          };
+                          setRecentNotifications(prev => [newNote, ...prev.slice(0, 8)]);
+                          setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Анонсировано событие: ${adminBroadcastMsg}`, type: 'info' }, ...prev]);
+                          setAdminBroadcastMsg('');
+                          alert('Уведомление отправлено в живую ленту!');
+                        }}
+                        className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Опубликовать в эфир
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Global Rates & Controls */}
+                  <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Быстрые настройки платформы
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Изменение глобального курса BTC/USD и состояния сервера.
+                    </p>
+
+                    <div className="space-y-3 text-xs">
+                      <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
+                        <div>
+                          <div className="font-bold text-white">Курс BTC/USD</div>
+                          <div className="text-[10px] text-slate-400" style={{ fontFamily: 'Verdana' }}>${btcPrice.toLocaleString('en-US')}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setBtcPrice(prev => prev + 500);
+                              setBtcTrend('up');
+                              setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: 'Курс BTC изменен администратором (+500$)', type: 'system' }, ...prev]);
+                            }}
+                            className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold"
+                          >
+                            + $500
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBtcPrice(prev => Math.max(10000, prev - 500));
+                              setBtcTrend('down');
+                              setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: 'Курс BTC изменен администратором (-500$)', type: 'system' }, ...prev]);
+                            }}
+                            className="px-2.5 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-bold"
+                          >
+                            - $500
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
+                        <div>
+                          <div className="font-bold text-white">Сбросить таймер ROLL клейма</div>
+                          <div className="text-[10px] text-slate-400">Сбросить кулдаун 60 минут текущего админа</div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setRollStatus(prev => ({ ...prev, cooldownSeconds: 0 }));
+                            if (currentUser) {
+                              const updated = { ...currentUser, nextRollTimestamp: 0 };
+                              syncUserToStorage(updated);
+                            }
+                            alert('Таймер сбора крана сброшен! Вы можете совершить ROLL прямо сейчас.');
+                          }}
+                          className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 rounded-xl text-[10px] font-bold"
+                        >
+                          Сбросить кулдаун
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Audit Log */}
+                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-amber-400" />
+                    Журнал системного аудита админ-панели
+                  </h3>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 font-mono text-[11px]">
+                    {adminLog.map((log) => (
+                      <div key={log.id} className="p-2.5 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          <span className="text-slate-300">{log.text}</span>
+                        </div>
+                        <span className="text-slate-500 text-[10px]">{log.time}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
