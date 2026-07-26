@@ -141,6 +141,20 @@ function CountUp({ target, duration = 2000, suffix = '', prefix = '', decimals =
   );
 }
 
+// Real-time continuous payouts counter helper
+const BASE_ANCHOR_TIME = 1784937600000;
+const BASE_PAID_OUT = 100.00;
+
+function calculateCurrentTotalPaidOut(): number {
+  if (typeof window === 'undefined') return BASE_PAID_OUT;
+  const now = Date.now();
+  const elapsedMs = Math.max(0, now - BASE_ANCHOR_TIME);
+  // Continuous real-time growth ($0.01 every 30 seconds = $0.000333 per second)
+  const timeGrowth = (elapsedMs / 30000) * 0.01;
+  const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+  return BASE_PAID_OUT + timeGrowth + (isNaN(storedExtra) ? 0 : storedExtra);
+}
+
 export default function Home({ initialDashboardOpen = false }: { initialDashboardOpen?: boolean }) {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   
@@ -148,7 +162,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [btcPrice, setBtcPrice] = React.useState<number>(97500.00);
   const [btc24hChange, setBtc24hChange] = React.useState<number>(1.85);
   const [btcTrend, setBtcTrend] = React.useState<'up' | 'down'>('up');
-  const [totalPaidOut, setTotalPaidOut] = React.useState(100.00);
+  const [totalPaidOut, setTotalPaidOut] = React.useState<number>(100.00);
 
   // --- AUTHENTICATION & CABINET STATE ---
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -550,13 +564,20 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     };
   }, []);
 
-  // Slow growth for payouts counter ($100.00 base) - very slow update
+  // Real-time continuous growth for payouts counter calculated against fixed time anchor
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setTotalPaidOut(prev => prev + (Math.floor(Math.random() * 2) + 1) / 100);
-    }, 30000);
+    const timer = setTimeout(() => {
+      setTotalPaidOut(calculateCurrentTotalPaidOut());
+    }, 0);
 
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      setTotalPaidOut(calculateCurrentTotalPaidOut());
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
 
   // Live Earning simulator representing active referrals rolling & passive mining
@@ -837,7 +858,13 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           cooldownSeconds: 3600 // 1 hour
         }));
 
+        // Increment extra paid out counter in localStorage
+        const satInUsd = (reward / 100000000) * btcPrice;
+        const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+        localStorage.setItem('freebitco_extra_paid_out', (currentExtra + satInUsd).toString());
+
         syncUserToStorage(updatedUser);
+        setTotalPaidOut(calculateCurrentTotalPaidOut());
       }
     }, 80);
   };
