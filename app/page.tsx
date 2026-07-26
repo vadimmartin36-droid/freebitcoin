@@ -47,7 +47,9 @@ import {
   X,
   Menu,
   QrCode,
-  Download
+  Download,
+  UserPlus,
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -189,6 +191,22 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [adminUsersList, setAdminUsersList] = React.useState<any[]>([]);
   const [adminPayoutNotifications, setAdminPayoutNotifications] = React.useState<any[]>([]);
   const [adminBroadcastMsg, setAdminBroadcastMsg] = React.useState<string>('');
+  const [adminUserSearchQuery, setAdminUserSearchQuery] = React.useState<string>('');
+  const [adminUserRoleFilter, setAdminUserRoleFilter] = React.useState<string>('all');
+  const [adminUserTierFilter, setAdminUserTierFilter] = React.useState<string>('all');
+  const [editingUser, setEditingUser] = React.useState<any | null>(null);
+  const [editUserBalanceInput, setEditUserBalanceInput] = React.useState<string>('');
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = React.useState<boolean>(false);
+  const [newUserForm, setNewUserForm] = React.useState({
+    email: '',
+    name: '',
+    password: '',
+    wallet: '',
+    balance: '1000',
+    tier: 'Bronze',
+    isAdmin: false
+  });
+
   const [adminLog, setAdminLog] = React.useState<Array<{ id: number; time: string; text: string; type: 'info' | 'user' | 'system' }>>([
     { id: 1, time: '18:42', text: 'Админ-панель инициализирована. Система работает штатно.', type: 'system' },
     { id: 2, time: '18:40', text: 'Резервная копия структуры пользователей обновлена в LocalStorage.', type: 'info' }
@@ -518,9 +536,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       const existingAccounts = localStorage.getItem('freebitco_accounts');
       let accountsList = existingAccounts ? JSON.parse(existingAccounts) : [];
       
-      const adminVadimExists = accountsList.some((a: any) => a.email.toLowerCase() === 'vadimmartin@ukr.net');
-      if (!adminVadimExists) {
-        accountsList.push({
+      const defaultUsersToEnsure = [
+        {
           email: 'vadimmartin@ukr.net',
           password: 'admin',
           name: 'Вадим Мартин (Admin)',
@@ -535,44 +552,141 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           tier: 'Platinum',
           twoFactorEnabled: true,
           isAdmin: true
-        });
-      }
+        },
+        {
+          email: 'crypto_holder@ukr.net',
+          password: 'user123',
+          name: 'Михаил Ковалев',
+          avatar: 'https://picsum.photos/seed/mikhail/100/100',
+          wallet: 'bc1q9x382ks9012hsd98231084201928302193',
+          refId: 'mikhail88',
+          refShare: 25,
+          balance: 845200,
+          cumulativeClaims: 88,
+          rollsCount: 88,
+          loyaltyPoints: 1760,
+          tier: 'Gold',
+          twoFactorEnabled: true,
+          isAdmin: false
+        },
+        {
+          email: 'elena.petrova@crypto.ua',
+          password: 'user123',
+          name: 'Елена Петрова',
+          avatar: 'https://picsum.photos/seed/elena/100/100',
+          wallet: 'bc1q88a912ks3019shd0182740192837482910',
+          refId: 'elena312',
+          refShare: 15,
+          balance: 312400,
+          cumulativeClaims: 42,
+          rollsCount: 42,
+          loyaltyPoints: 840,
+          tier: 'Silver',
+          twoFactorEnabled: false,
+          isAdmin: false
+        },
+        {
+          email: 'alexey_smirnov@gmail.com',
+          password: 'user123',
+          name: 'Алексей Смирнов',
+          avatar: 'https://picsum.photos/seed/alexey/100/100',
+          wallet: 'bc1q777881923ks0192384729102837482910',
+          refId: 'alex77',
+          refShare: 35,
+          balance: 1250000,
+          cumulativeClaims: 195,
+          rollsCount: 195,
+          loyaltyPoints: 3900,
+          tier: 'Platinum',
+          twoFactorEnabled: true,
+          isAdmin: false
+        },
+        {
+          email: 'oleg.shatov@ukr.net',
+          password: 'user123',
+          name: 'Олег Шатов',
+          avatar: 'https://picsum.photos/seed/oleg/100/100',
+          wallet: 'bc1q6655443322110099887766554433221100',
+          refId: 'oleg95',
+          refShare: 10,
+          balance: 95000,
+          cumulativeClaims: 18,
+          rollsCount: 18,
+          loyaltyPoints: 360,
+          tier: 'Bronze',
+          twoFactorEnabled: false,
+          isAdmin: false
+        },
+        {
+          email: 'satoshi_fan2026@gmail.com',
+          password: 'user123',
+          name: 'Дмитрий Василенко',
+          avatar: 'https://picsum.photos/seed/dmitry/100/100',
+          wallet: 'bc1q11223344556677889900aabbccddeeff00',
+          refId: 'sat2026',
+          refShare: 20,
+          balance: 420000,
+          cumulativeClaims: 65,
+          rollsCount: 65,
+          loyaltyPoints: 1300,
+          tier: 'Gold',
+          twoFactorEnabled: false,
+          isAdmin: false
+        },
+        {
+          email: 'anna_melnikova@ukr.net',
+          password: 'user123',
+          name: 'Анна Мельникова',
+          avatar: 'https://picsum.photos/seed/anna/100/100',
+          wallet: 'bc1q223344556677889900aabbccddeeff11',
+          refId: 'anna18',
+          refShare: 10,
+          balance: 18500,
+          cumulativeClaims: 8,
+          rollsCount: 8,
+          loyaltyPoints: 160,
+          tier: 'Bronze',
+          twoFactorEnabled: false,
+          isAdmin: false
+        },
+        {
+          email: 'demo@freebitco.io',
+          password: 'demo123',
+          name: 'Крипто Бро',
+          avatar: 'https://picsum.photos/seed/avatar1/100/100',
+          wallet: 'bc1qxy2kg3ut7v6396t88372864839201019183',
+          refId: 'demo999',
+          refShare: 25,
+          balance: 15420,
+          cumulativeClaims: 4,
+          rollsCount: 4,
+          loyaltyPoints: 120,
+          tier: 'Bronze',
+          twoFactorEnabled: false,
+          isAdmin: true
+        },
+        {
+          email: 'admin@freebitco.io',
+          password: 'admin',
+          name: 'Главный Администратор',
+          avatar: 'https://picsum.photos/seed/admin/100/100',
+          wallet: 'bc1qadmin99999999999999999999999999999',
+          refId: 'admin1',
+          refShare: 50,
+          balance: 5000000,
+          cumulativeClaims: 150,
+          rollsCount: 150,
+          loyaltyPoints: 5000,
+          tier: 'Platinum',
+          twoFactorEnabled: true,
+          isAdmin: true
+        }
+      ];
 
-      if (!existingAccounts) {
-        accountsList.push(
-          {
-            email: 'demo@freebitco.io',
-            password: 'demo123',
-            name: 'Крипто Бро',
-            avatar: 'https://picsum.photos/seed/avatar1/100/100',
-            wallet: 'bc1qxy2kg3ut7v6396t88372864839201019183',
-            refId: 'demo999',
-            refShare: 25,
-            balance: 15420, // Satoshis
-            cumulativeClaims: 4,
-            rollsCount: 4,
-            loyaltyPoints: 120,
-            tier: 'Bronze',
-            twoFactorEnabled: false,
-            isAdmin: true
-          },
-          {
-            email: 'admin@freebitco.io',
-            password: 'admin',
-            name: 'Главный Администратор',
-            avatar: 'https://picsum.photos/seed/admin/100/100',
-            wallet: 'bc1qadmin99999999999999999999999999999',
-            refId: 'admin1',
-            refShare: 50,
-            balance: 5000000,
-            cumulativeClaims: 150,
-            rollsCount: 150,
-            loyaltyPoints: 5000,
-            tier: 'Platinum',
-            twoFactorEnabled: true,
-            isAdmin: true
-          }
-        );
+      for (const u of defaultUsersToEnsure) {
+        if (!accountsList.some((a: any) => a.email.toLowerCase() === u.email.toLowerCase())) {
+          accountsList.push(u);
+        }
       }
       localStorage.setItem('freebitco_accounts', JSON.stringify(accountsList));
 
@@ -2865,138 +2979,522 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
                 {/* Section 1: User Management Table */}
                 <div className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/10 rounded-3xl space-y-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
+                  {/* Header & Main Stats */}
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-white/5 pb-5">
                     <div>
                       <h3 className="text-base font-bold text-white flex items-center gap-2">
                         <Users className="w-5 h-5 text-amber-400" />
-                        Управление пользователями системы ({adminUsersList.length})
+                        Управление всеми пользователями сайта ({adminUsersList.length})
                       </h3>
-                      <p className="text-xs text-slate-400">Просмотр, редактирование балансов, выплат и прав пользователей.</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Полный реестр аккаунтов. Управление балансами, статусами VIP, правами доступа и кошельками.</p>
                     </div>
-                    <button
-                      onClick={refreshAdminUsersList}
-                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                      Обновить список
-                    </button>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => setIsAddUserModalOpen(true)}
+                        className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        + Добавить пользователя
+                      </button>
+                      <button
+                        onClick={refreshAdminUsersList}
+                        className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                        Обновить
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Всего аккаунтов</div>
+                      <div className="text-lg font-extrabold text-white mt-1">{adminUsersList.length}</div>
+                    </div>
+                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                      <div className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Администраторы</div>
+                      <div className="text-lg font-extrabold text-amber-300 mt-1">{adminUsersList.filter((u: any) => u.isAdmin).length}</div>
+                    </div>
+                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                      <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Балансы (SAT)</div>
+                      <div className="text-sm sm:text-base font-extrabold text-emerald-400 mt-1 truncate" style={{ fontFamily: 'Verdana' }}>
+                        {adminUsersList.reduce((acc: number, u: any) => acc + (u.balance || 0), 0).toLocaleString('en-US')}
+                      </div>
+                    </div>
+                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                      <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Всего Клеймов</div>
+                      <div className="text-lg font-extrabold text-cyan-300 mt-1" style={{ fontFamily: 'Verdana' }}>
+                        {adminUsersList.reduce((acc: number, u: any) => acc + (u.cumulativeClaims || 0), 0).toLocaleString('en-US')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search and Filters Bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
+                    <div className="sm:col-span-6 relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Поиск по имени, email или BTC кошельку..."
+                        value={adminUserSearchQuery}
+                        onChange={(e) => setAdminUserSearchQuery(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-amber-500/50 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <select
+                        value={adminUserRoleFilter}
+                        onChange={(e) => setAdminUserRoleFilter(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="all">Все роли</option>
+                        <option value="admin">Только Администраторы 👑</option>
+                        <option value="user">Только Пользователи 👤</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <select
+                        value={adminUserTierFilter}
+                        onChange={(e) => setAdminUserTierFilter(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="all">Все VIP Уровни</option>
+                        <option value="Bronze">Bronze</option>
+                        <option value="Silver">Silver</option>
+                        <option value="Gold">Gold</option>
+                        <option value="Platinum">Platinum</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Users Table */}
+                  <div className="overflow-x-auto rounded-2xl border border-white/5 bg-black/20">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
-                          <th className="pb-3 font-bold">Пользователь</th>
-                          <th className="pb-3 font-bold">Роль</th>
-                          <th className="pb-3 font-bold">Баланс (SAT)</th>
-                          <th className="pb-3 font-bold">Уровень</th>
-                          <th className="pb-3 font-bold">Claims</th>
-                          <th className="pb-3 font-bold text-right">Действия админа</th>
+                        <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider bg-white/[0.02]">
+                          <th className="py-3 px-4 font-bold">Пользователь</th>
+                          <th className="py-3 px-3 font-bold">Роль</th>
+                          <th className="py-3 px-3 font-bold">Баланс (SAT)</th>
+                          <th className="py-3 px-3 font-bold">VIP Уровень</th>
+                          <th className="py-3 px-3 font-bold">Активность</th>
+                          <th className="py-3 px-4 font-bold text-right">Управление</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {adminUsersList.map((u: any, idx: number) => (
-                          <tr key={u.email || idx} className="hover:bg-white/[0.02] transition-colors">
-                            <td className="py-3 font-mono">
-                              <div className="flex items-center gap-2.5">
-                                <img src={u.avatar || 'https://picsum.photos/seed/avatar1/100/100'} alt="" className="w-7 h-7 rounded-lg object-cover border border-white/10" />
-                                <div>
-                                  <div className="text-white font-bold text-xs">{u.name}</div>
-                                  <div className="text-[10px] text-slate-400">{u.email}</div>
+                        {adminUsersList
+                          .filter((u: any) => {
+                            const query = adminUserSearchQuery.toLowerCase().trim();
+                            const matchesQuery = !query || 
+                              u.name?.toLowerCase().includes(query) ||
+                              u.email?.toLowerCase().includes(query) ||
+                              u.wallet?.toLowerCase().includes(query);
+
+                            const matchesRole = adminUserRoleFilter === 'all' ||
+                              (adminUserRoleFilter === 'admin' && u.isAdmin) ||
+                              (adminUserRoleFilter === 'user' && !u.isAdmin);
+
+                            const matchesTier = adminUserTierFilter === 'all' ||
+                              u.tier === adminUserTierFilter;
+
+                            return matchesQuery && matchesRole && matchesTier;
+                          })
+                          .map((u: any, idx: number) => (
+                            <tr key={u.email || idx} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3 px-4 font-mono">
+                                <div className="flex items-center gap-3">
+                                  <img src={u.avatar || 'https://picsum.photos/seed/avatar1/100/100'} alt="" className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0" />
+                                  <div className="min-w-0">
+                                    <div className="text-white font-bold text-xs truncate">{u.name || 'Без имени'}</div>
+                                    <div className="text-[10px] text-amber-300 font-mono truncate">{u.email}</div>
+                                    <div className="text-[9px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                      <span className="truncate max-w-[120px]">{u.wallet || 'Кошелек не указан'}</span>
+                                      {u.wallet && (
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(u.wallet);
+                                            alert(`Кошелек ${u.wallet} скопирован!`);
+                                          }}
+                                          className="text-slate-400 hover:text-amber-400 transition-colors"
+                                          title="Скопировать кошелек"
+                                        >
+                                          <Copy className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="py-3">
-                              <span className={cn(
-                                "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
-                                u.isAdmin ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400"
-                              )}>
-                                {u.isAdmin ? '👑 ADMIN' : 'USER'}
-                              </span>
-                            </td>
-                            <td className="py-3 font-mono font-bold text-amber-300" style={{ fontFamily: 'Verdana' }}>
-                              {u.balance?.toLocaleString('en-US') || 0} SAT
-                            </td>
-                            <td className="py-3">
-                              <span className="px-2 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-bold">
-                                {u.tier || 'Bronze'}
-                              </span>
-                            </td>
-                            <td className="py-3 font-mono text-slate-300" style={{ fontFamily: 'Verdana' }}>
-                              {u.cumulativeClaims || 0}
-                            </td>
-                            <td className="py-3 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {/* Add +10k SAT */}
-                                <button
-                                  onClick={() => {
-                                    const updated = adminUsersList.map((usr: any) => {
-                                      if (usr.email === u.email) {
-                                        return { ...usr, balance: (usr.balance || 0) + 10000 };
-                                      }
-                                      return usr;
-                                    });
-                                    localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
-                                    setAdminUsersList(updated);
-                                    if (currentUser.email === u.email) {
-                                      setCurrentUser({ ...currentUser, balance: currentUser.balance + 10000 });
-                                    }
-                                    setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Начислено +10,000 SAT пользователю ${u.email}`, type: 'user' }, ...prev]);
-                                  }}
-                                  className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold transition-all"
-                                >
-                                  +10k SAT
-                                </button>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className={cn(
+                                  "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1",
+                                  u.isAdmin ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "bg-slate-800/80 text-slate-400 border border-slate-700/50"
+                                )}>
+                                  {u.isAdmin ? '👑 ADMIN' : '👤 USER'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 font-mono">
+                                <div className="text-emerald-400 font-bold text-xs" style={{ fontFamily: 'Verdana' }}>
+                                  {(u.balance || 0).toLocaleString('en-US')} SAT
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  ~${(((u.balance || 0) / 100000000) * btcPrice).toFixed(2)} USD
+                                </div>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded text-[10px] font-bold inline-block",
+                                  u.tier === 'Platinum' && "bg-purple-500/20 text-purple-300 border border-purple-500/30",
+                                  u.tier === 'Gold' && "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+                                  u.tier === 'Silver' && "bg-slate-300/20 text-slate-200 border border-slate-300/30",
+                                  (!u.tier || u.tier === 'Bronze') && "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                )}>
+                                  {u.tier || 'Bronze'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 font-mono text-slate-300" style={{ fontFamily: 'Verdana' }}>
+                                <div className="text-xs">{u.cumulativeClaims || 0} клеймов</div>
+                                <div className="text-[10px] text-slate-500">{u.loyaltyPoints || 0} LP</div>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Edit user button */}
+                                  <button
+                                    onClick={() => {
+                                      setEditingUser(u);
+                                      setEditUserBalanceInput((u.balance || 0).toString());
+                                    }}
+                                    className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                    title="Редактировать баланс и данные"
+                                  >
+                                    <Settings className="w-3 h-3" />
+                                    Изменить
+                                  </button>
 
-                                {/* Toggle Admin role */}
-                                <button
-                                  onClick={() => {
-                                    const updated = adminUsersList.map((usr: any) => {
-                                      if (usr.email === u.email) {
-                                        return { ...usr, isAdmin: !usr.isAdmin };
+                                  {/* Quick +10k SAT */}
+                                  <button
+                                    onClick={() => {
+                                      const updated = adminUsersList.map((usr: any) => {
+                                        if (usr.email === u.email) {
+                                          return { ...usr, balance: (usr.balance || 0) + 10000 };
+                                        }
+                                        return usr;
+                                      });
+                                      localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                                      setAdminUsersList(updated);
+                                      if (currentUser.email === u.email) {
+                                        setCurrentUser({ ...currentUser, balance: currentUser.balance + 10000 });
                                       }
-                                      return usr;
-                                    });
-                                    localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
-                                    setAdminUsersList(updated);
-                                    if (currentUser.email === u.email) {
-                                      setCurrentUser({ ...currentUser, isAdmin: !currentUser.isAdmin });
-                                    }
-                                    setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Изменена роль пользователя ${u.email}`, type: 'user' }, ...prev]);
-                                  }}
-                                  className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 rounded-lg text-[10px] font-bold transition-all"
-                                >
-                                  {u.isAdmin ? 'Снять Admin' : 'Сделать Admin'}
-                                </button>
+                                      setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Начислено +10,000 SAT пользователю ${u.email}`, type: 'user' }, ...prev]);
+                                    }}
+                                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold transition-all"
+                                  >
+                                    +10k
+                                  </button>
 
-                                {/* Set Platinum tier */}
-                                <button
-                                  onClick={() => {
-                                    const updated = adminUsersList.map((usr: any) => {
-                                      if (usr.email === u.email) {
-                                        return { ...usr, tier: 'Platinum', cumulativeClaims: 100 };
+                                  {/* Toggle Admin role */}
+                                  <button
+                                    onClick={() => {
+                                      const updated = adminUsersList.map((usr: any) => {
+                                        if (usr.email === u.email) {
+                                          return { ...usr, isAdmin: !usr.isAdmin };
+                                        }
+                                        return usr;
+                                      });
+                                      localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                                      setAdminUsersList(updated);
+                                      if (currentUser.email === u.email) {
+                                        setCurrentUser({ ...currentUser, isAdmin: !currentUser.isAdmin });
                                       }
-                                      return usr;
-                                    });
-                                    localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
-                                    setAdminUsersList(updated);
-                                    if (currentUser.email === u.email) {
-                                      setCurrentUser({ ...currentUser, tier: 'Platinum', cumulativeClaims: 100 });
-                                    }
-                                    setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Присвоен статус Platinum пользователю ${u.email}`, type: 'user' }, ...prev]);
-                                  }}
-                                  className="px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 rounded-lg text-[10px] font-bold transition-all"
-                                >
-                                  Platinum
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                                      setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Изменена роль пользователя ${u.email} (Admin: ${!u.isAdmin})`, type: 'user' }, ...prev]);
+                                    }}
+                                    className="px-2 py-1 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 rounded-lg text-[10px] font-bold transition-all"
+                                  >
+                                    {u.isAdmin ? 'Снять Admin' : 'Admin'}
+                                  </button>
+
+                                  {/* Delete user */}
+                                  <button
+                                    onClick={() => {
+                                      if (u.email.toLowerCase() === 'vadimmartin@ukr.net') {
+                                        alert('Главного администратора vadimmartin@ukr.net нельзя удалить!');
+                                        return;
+                                      }
+                                      if (confirm(`Вы уверены, что хотите удалить аккаунт ${u.email}?`)) {
+                                        const updated = adminUsersList.filter((usr: any) => usr.email !== u.email);
+                                        localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                                        setAdminUsersList(updated);
+                                        setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Удален аккаунт ${u.email}`, type: 'user' }, ...prev]);
+                                      }
+                                    }}
+                                    className="p-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-bold transition-all"
+                                    title="Удалить аккаунт"
+                                  >
+                                    <AlertTriangle className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
+
+                {/* MODAL: EDIT USER BALANCE / DETAILS */}
+                {editingUser && (
+                  <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl">
+                      <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Settings className="w-4 h-4 text-amber-400" />
+                          Редактирование: {editingUser.email}
+                        </h3>
+                        <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-white">✕</button>
+                      </div>
+
+                      <div className="space-y-4 text-xs">
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Имя пользователя</label>
+                          <input
+                            type="text"
+                            value={editingUser.name || ''}
+                            onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Баланс (в Сатоши SAT)</label>
+                          <input
+                            type="number"
+                            value={editUserBalanceInput}
+                            onChange={(e) => setEditUserBalanceInput(e.target.value)}
+                            className="w-full bg-black/50 border border-amber-500/40 rounded-xl px-3 py-2 text-amber-300 font-mono font-bold text-sm focus:outline-none focus:border-amber-500"
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button onClick={() => setEditUserBalanceInput((parseInt(editUserBalanceInput || '0') + 1000).toString())} className="px-2 py-1 bg-white/5 hover:bg-white/10 rounded border border-white/10 text-[10px] text-slate-300">+1,000</button>
+                            <button onClick={() => setEditUserBalanceInput((parseInt(editUserBalanceInput || '0') + 50000).toString())} className="px-2 py-1 bg-white/5 hover:bg-white/10 rounded border border-white/10 text-[10px] text-slate-300">+50,000</button>
+                            <button onClick={() => setEditUserBalanceInput((parseInt(editUserBalanceInput || '0') + 1000000).toString())} className="px-2 py-1 bg-white/5 hover:bg-white/10 rounded border border-white/10 text-[10px] text-slate-300">+1,000,000</button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Bitcoin Кошелек</label>
+                          <input
+                            type="text"
+                            value={editingUser.wallet || ''}
+                            onChange={(e) => setEditingUser({ ...editingUser, wallet: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">VIP Уровень</label>
+                            <select
+                              value={editingUser.tier || 'Bronze'}
+                              onChange={(e) => setEditingUser({ ...editingUser, tier: e.target.value })}
+                              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none"
+                            >
+                              <option value="Bronze">Bronze</option>
+                              <option value="Silver">Silver</option>
+                              <option value="Gold">Gold</option>
+                              <option value="Platinum">Platinum</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">Роль Админа</label>
+                            <button
+                              type="button"
+                              onClick={() => setEditingUser({ ...editingUser, isAdmin: !editingUser.isAdmin })}
+                              className={cn(
+                                "w-full px-3 py-2 rounded-xl font-bold text-xs border transition-all",
+                                editingUser.isAdmin ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-white/5 text-slate-400 border-white/10"
+                              )}
+                            >
+                              {editingUser.isAdmin ? '👑 Администратор' : '👤 Пользователь'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2 border-t border-white/10">
+                        <button
+                          onClick={() => {
+                            const newBalance = parseInt(editUserBalanceInput, 10) || 0;
+                            const updatedUser = { ...editingUser, balance: newBalance };
+                            const updatedList = adminUsersList.map((u: any) => u.email === updatedUser.email ? updatedUser : u);
+                            localStorage.setItem('freebitco_accounts', JSON.stringify(updatedList));
+                            setAdminUsersList(updatedList);
+                            if (currentUser && currentUser.email === updatedUser.email) {
+                              setCurrentUser(updatedUser);
+                            }
+                            setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Обновлены данные пользователя ${updatedUser.email} (Баланс: ${newBalance} SAT)`, type: 'user' }, ...prev]);
+                            setEditingUser(null);
+                          }}
+                          className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl transition-all"
+                        >
+                          Сохранить изменения
+                        </button>
+                        <button
+                          onClick={() => setEditingUser(null)}
+                          className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs rounded-xl transition-all"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+
+                {/* MODAL: ADD NEW USER */}
+                {isAddUserModalOpen && (
+                  <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl">
+                      <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <UserPlus className="w-4 h-4 text-amber-400" />
+                          Создание нового пользователя
+                        </h3>
+                        <button onClick={() => setIsAddUserModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+                      </div>
+
+                      <div className="space-y-3 text-xs">
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Email адрес *</label>
+                          <input
+                            type="email"
+                            placeholder="user@example.com"
+                            value={newUserForm.email}
+                            onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Имя пользователя</label>
+                          <input
+                            type="text"
+                            placeholder="Иван И."
+                            value={newUserForm.name}
+                            onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Пароль</label>
+                          <input
+                            type="password"
+                            placeholder="••••••••"
+                            value={newUserForm.password}
+                            onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Стартовый баланс (SAT)</label>
+                          <input
+                            type="number"
+                            value={newUserForm.balance}
+                            onChange={(e) => setNewUserForm({ ...newUserForm, balance: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Bitcoin Кошелек (опционально)</label>
+                          <input
+                            type="text"
+                            placeholder="bc1q..."
+                            value={newUserForm.wallet}
+                            onChange={(e) => setNewUserForm({ ...newUserForm, wallet: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">VIP Уровень</label>
+                            <select
+                              value={newUserForm.tier}
+                              onChange={(e) => setNewUserForm({ ...newUserForm, tier: e.target.value })}
+                              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none"
+                            >
+                              <option value="Bronze">Bronze</option>
+                              <option value="Silver">Silver</option>
+                              <option value="Gold">Gold</option>
+                              <option value="Platinum">Platinum</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">Права Администратора</label>
+                            <button
+                              type="button"
+                              onClick={() => setNewUserForm({ ...newUserForm, isAdmin: !newUserForm.isAdmin })}
+                              className={cn(
+                                "w-full px-3 py-2 rounded-xl font-bold text-xs border transition-all",
+                                newUserForm.isAdmin ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-white/5 text-slate-400 border-white/10"
+                              )}
+                            >
+                              {newUserForm.isAdmin ? '👑 Да (Admin)' : '👤 Нет (User)'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2 border-t border-white/10">
+                        <button
+                          onClick={() => {
+                            if (!newUserForm.email.trim()) {
+                              alert('Укажите email пользователя!');
+                              return;
+                            }
+                            const newAcc = {
+                              email: newUserForm.email.trim(),
+                              name: newUserForm.name.trim() || newUserForm.email.split('@')[0],
+                              password: newUserForm.password || '123456',
+                              wallet: newUserForm.wallet || ('bc1q' + Math.random().toString(36).substring(2, 15)),
+                              refId: Math.floor(100000 + Math.random() * 900000).toString(),
+                              refShare: 10,
+                              balance: parseInt(newUserForm.balance, 10) || 1000,
+                              cumulativeClaims: 0,
+                              rollsCount: 0,
+                              loyaltyPoints: 0,
+                              tier: newUserForm.tier,
+                              twoFactorEnabled: false,
+                              isAdmin: newUserForm.isAdmin,
+                              avatar: `https://picsum.photos/seed/${newUserForm.email}/100/100`
+                            };
+
+                            const updated = [newAcc, ...adminUsersList];
+                            localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                            setAdminUsersList(updated);
+                            setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Создан новый аккаунт ${newAcc.email}`, type: 'user' }, ...prev]);
+                            setIsAddUserModalOpen(false);
+                            setNewUserForm({ email: '', name: '', password: '', wallet: '', balance: '1000', tier: 'Bronze', isAdmin: false });
+                          }}
+                          className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl transition-all"
+                        >
+                          Создать аккаунт
+                        </button>
+                        <button
+                          onClick={() => setIsAddUserModalOpen(false)}
+                          className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs rounded-xl transition-all"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
 
                 {/* Section 2: Platform Controls & Broadcast */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
