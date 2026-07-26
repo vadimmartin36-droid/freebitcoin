@@ -187,6 +187,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
   // --- ADMIN PANEL STATE ---
   const [adminUsersList, setAdminUsersList] = React.useState<any[]>([]);
+  const [adminPayoutNotifications, setAdminPayoutNotifications] = React.useState<any[]>([]);
   const [adminBroadcastMsg, setAdminBroadcastMsg] = React.useState<string>('');
   const [adminLog, setAdminLog] = React.useState<Array<{ id: number; time: string; text: string; type: 'info' | 'user' | 'system' }>>([
     { id: 1, time: '18:42', text: 'Админ-панель инициализирована. Система работает штатно.', type: 'system' },
@@ -199,11 +200,93 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     setAdminUsersList(accounts);
   }, []);
 
+  const refreshAdminPayoutNotifications = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem('freebitco_admin_payout_notifications');
+    if (stored) {
+      setAdminPayoutNotifications(JSON.parse(stored));
+    } else {
+      const defaultNotifs = [
+        {
+          id: 'req_881902',
+          userEmail: 'crypto_holder@ukr.net',
+          userName: 'Михаил К.',
+          amountSat: 45000,
+          feeSat: 1000,
+          netAmountSat: 44000,
+          wallet: 'bc1q9x382ks9012hsd98231084201928302193',
+          speed: 'Обычный (Slow)',
+          date: '2026-07-26 18:30',
+          status: 'Ожидает обработки',
+          timestamp: Date.now() - 1800000,
+          unread: true
+        }
+      ];
+      localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(defaultNotifs));
+      setAdminPayoutNotifications(defaultNotifs);
+    }
+  }, []);
+
+  const handleApprovePayoutRequest = (notifId: string) => {
+    const updated = adminPayoutNotifications.map((notif: any) => {
+      if (notif.id === notifId) {
+        return { ...notif, status: 'Одобрен (Админ)', unread: false };
+      }
+      return notif;
+    });
+    localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updated));
+    setAdminPayoutNotifications(updated);
+
+    const approvedNotif = adminPayoutNotifications.find((n: any) => n.id === notifId);
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: new Date().toLocaleTimeString().slice(0, 5),
+      text: `✅ ОДОБРЕНА ВЫПЛАТА #${notifId}: ${approvedNotif?.userEmail} (${approvedNotif?.amountSat?.toLocaleString()} SAT)`,
+      type: 'user'
+    }, ...prev]);
+  };
+
+  const handleRejectPayoutRequest = (notifId: string) => {
+    const targetNotif = adminPayoutNotifications.find((n: any) => n.id === notifId);
+    if (!targetNotif) return;
+
+    const updatedNotifs = adminPayoutNotifications.map((notif: any) => {
+      if (notif.id === notifId) {
+        return { ...notif, status: 'Отклонен', unread: false };
+      }
+      return notif;
+    });
+    localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
+    setAdminPayoutNotifications(updatedNotifs);
+
+    const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+    const updatedAccounts = accounts.map((acc: any) => {
+      if (acc.email.toLowerCase() === targetNotif.userEmail.toLowerCase()) {
+        return { ...acc, balance: (acc.balance || 0) + targetNotif.amountSat };
+      }
+      return acc;
+    });
+    localStorage.setItem('freebitco_accounts', JSON.stringify(updatedAccounts));
+    setAdminUsersList(updatedAccounts);
+
+    if (currentUser && currentUser.email.toLowerCase() === targetNotif.userEmail.toLowerCase()) {
+      setCurrentUser({ ...currentUser, balance: currentUser.balance + targetNotif.amountSat });
+    }
+
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: new Date().toLocaleTimeString().slice(0, 5),
+      text: `❌ ОТКЛОНЕНА ВЫПЛАТА #${notifId}: Средства (${targetNotif.amountSat?.toLocaleString()} SAT) возвращены на баланс ${targetNotif.userEmail}`,
+      type: 'user'
+    }, ...prev]);
+  };
+
   React.useEffect(() => {
+    refreshAdminPayoutNotifications();
     if (activeDashboardTab === 'admin') {
       refreshAdminUsersList();
     }
-  }, [activeDashboardTab, refreshAdminUsersList]);
+  }, [activeDashboardTab, refreshAdminUsersList, refreshAdminPayoutNotifications]);
 
   const [authModal, setAuthModal] = React.useState({
     isOpen: false,
@@ -360,6 +443,36 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     };
 
     setPayoutHistory(prev => [newTx, ...prev]);
+
+    // Create admin notification item
+    const adminNotif = {
+      id: `req_${timestamp.toString().slice(-6)}`,
+      userEmail: currentUser.email,
+      userName: currentUser.name || 'Пользователь',
+      amountSat: amountNum,
+      feeSat: fee,
+      netAmountSat: amountNum - fee,
+      wallet: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
+      speed: payoutSpeed === 'instant' ? 'Мгновенный (Instant)' : 'Обычный (Slow)',
+      date: formattedDate,
+      status: payoutSpeed === 'instant' ? 'Одобрен (Авто)' : 'Ожидает обработки',
+      timestamp,
+      unread: true
+    };
+
+    if (typeof window !== 'undefined') {
+      const existingNotifs = JSON.parse(localStorage.getItem('freebitco_admin_payout_notifications') || '[]');
+      const updatedNotifs = [adminNotif, ...existingNotifs];
+      localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
+      setAdminPayoutNotifications(updatedNotifs);
+    }
+
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      text: `💸 ЗАПРОС НА ВЫВОД: ${currentUser.email} запросил(а) ${amountNum.toLocaleString('en-US')} SAT (Кошелек: ${currentUser.wallet || 'bc1q...'})`,
+      type: 'user'
+    }, ...prev]);
 
     // Record real withdrawal sum added to total paid out counter
     const withdrawnUsd = ((amountNum - fee) / 100000000) * btcPrice;
@@ -1346,8 +1459,15 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     <ShieldCheck className="w-4 h-4 text-amber-400" />
                     <span style={{ fontFamily: 'Georgia' }}>Панель администратора</span>
                   </span>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-amber-500/30">
-                    Admin
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider border border-amber-500/30">
+                      Admin
+                    </span>
+                    {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length > 0 && (
+                      <span className="text-[10px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.6)]">
+                        +{adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length}
+                      </span>
+                    )}
                   </span>
                 </button>
               )}
@@ -2608,6 +2728,139 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     </div>
                     <div className="text-[10px] text-emerald-400 mt-1 font-mono">Все сервисы онлайн</div>
                   </div>
+                </div>
+
+                {/* SECTION 0: Payout Requests Notifications for Admins */}
+                <div className="p-6 bg-gradient-to-b from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/30 rounded-3xl space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-amber-500/20 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                          <Wallet className="w-5 h-5 text-amber-400" />
+                          Уведомления о запросах на вывод средств
+                        </h3>
+                        {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length > 0 ? (
+                          <span className="px-2.5 py-0.5 bg-rose-500 text-white rounded-full text-[10px] font-bold animate-pulse">
+                            {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length} нов.
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-bold">
+                            Все обработаны
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Когда пользователи заказывают выплату, их заявки отображаются здесь. Администраторы получают мгновенные уведомления и могут одобрить транзакцию или отклонить с возвратом средств.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={refreshAdminPayoutNotifications}
+                      className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 transition-all flex items-center gap-1.5 shrink-0"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Обновить заявки
+                    </button>
+                  </div>
+
+                  {adminPayoutNotifications.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 text-xs font-mono">
+                      Заявок на вывод пока нет
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
+                            <th className="pb-3 font-bold">Заявка / Дата</th>
+                            <th className="pb-3 font-bold">Пользователь</th>
+                            <th className="pb-3 font-bold">Сумма к выводу</th>
+                            <th className="pb-3 font-bold">Тип</th>
+                            <th className="pb-3 font-bold">Bitcoin Кошелек</th>
+                            <th className="pb-3 font-bold">Статус</th>
+                            <th className="pb-3 font-bold text-right">Решение админа</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {adminPayoutNotifications.map((notif: any) => (
+                            <tr key={notif.id} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3 font-mono">
+                                <div className="text-amber-300 font-bold text-xs">{notif.id}</div>
+                                <div className="text-[10px] text-slate-400">{notif.date}</div>
+                              </td>
+                              <td className="py-3">
+                                <div className="text-white font-bold text-xs">{notif.userName}</div>
+                                <div className="text-[10px] font-mono text-slate-400">{notif.userEmail}</div>
+                              </td>
+                              <td className="py-3 font-mono">
+                                <div className="text-emerald-400 font-bold text-xs" style={{ fontFamily: 'Verdana' }}>
+                                  {notif.amountSat?.toLocaleString('en-US')} SAT
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  ~${(((notif.amountSat || 0) / 100000000) * btcPrice).toFixed(2)} USD
+                                </div>
+                              </td>
+                              <td className="py-3">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded text-[10px] font-bold",
+                                  notif.speed?.includes('Instant') ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" : "bg-slate-800 text-slate-300"
+                                )}>
+                                  {notif.speed || 'Обычный'}
+                                </span>
+                              </td>
+                              <td className="py-3 font-mono">
+                                <div className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                                  <span className="truncate max-w-[140px] inline-block">{notif.wallet}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(notif.wallet);
+                                      alert('Кошелек скопирован в буфер обмена!');
+                                    }}
+                                    className="p-1 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
+                                    title="Скопировать кошелек"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-3">
+                                <span className={cn(
+                                  "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-block",
+                                  notif.status === 'Ожидает обработки' && "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse",
+                                  notif.status?.includes('Одобрен') && "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40",
+                                  notif.status === 'Отклонен' && "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                )}>
+                                  {notif.status}
+                                </span>
+                              </td>
+                              <td className="py-3 text-right">
+                                {notif.status === 'Ожидает обработки' ? (
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      onClick={() => handleApprovePayoutRequest(notif.id)}
+                                      className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                    >
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      Одобрить
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectPayoutRequest(notif.id)}
+                                      className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                    >
+                                      <AlertTriangle className="w-3 h-3" />
+                                      Отклонить
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 font-mono">Решение принято</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
 
                 {/* Section 1: User Management Table */}
