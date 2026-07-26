@@ -403,8 +403,30 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const existingAccounts = localStorage.getItem('freebitco_accounts');
+      let accountsList = existingAccounts ? JSON.parse(existingAccounts) : [];
+      
+      const adminVadimExists = accountsList.some((a: any) => a.email.toLowerCase() === 'vadimmartin@ukr.net');
+      if (!adminVadimExists) {
+        accountsList.push({
+          email: 'vadimmartin@ukr.net',
+          password: 'admin',
+          name: 'Вадим Мартин (Admin)',
+          avatar: 'https://picsum.photos/seed/vadim/100/100',
+          wallet: 'bc1qvadimmartin9999999999999999999999',
+          refId: 'vadim1',
+          refShare: 50,
+          balance: 5000000,
+          cumulativeClaims: 150,
+          rollsCount: 150,
+          loyaltyPoints: 5000,
+          tier: 'Platinum',
+          twoFactorEnabled: true,
+          isAdmin: true
+        });
+      }
+
       if (!existingAccounts) {
-        const defaultAccounts = [
+        accountsList.push(
           {
             email: 'demo@freebitco.io',
             password: 'demo123',
@@ -437,15 +459,15 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             twoFactorEnabled: true,
             isAdmin: true
           }
-        ];
-        localStorage.setItem('freebitco_accounts', JSON.stringify(defaultAccounts));
+        );
       }
+      localStorage.setItem('freebitco_accounts', JSON.stringify(accountsList));
 
       // Restore session
       const session = localStorage.getItem('freebitco_session');
       if (session) {
         const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
-        const user = accounts.find((a: any) => a.email === session);
+        const user = accounts.find((a: any) => a.email.toLowerCase() === session.toLowerCase());
         if (user) {
           setTimeout(() => {
             const now = Date.now();
@@ -457,7 +479,11 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             } else {
               setIdleModalOpen(true);
             }
-            const isUserAdmin = user.isAdmin ?? (user.email === 'demo@freebitco.io' || user.email.toLowerCase().includes('admin'));
+            const isUserAdmin = user.isAdmin ?? (
+              user.email.toLowerCase() === 'vadimmartin@ukr.net' ||
+              user.email === 'demo@freebitco.io' ||
+              user.email.toLowerCase().includes('admin')
+            );
             let finalUser = { ...user, isAdmin: isUserAdmin, lastMiningTimestamp: now };
             setCurrentUser(finalUser);
             syncUserToStorage(finalUser);
@@ -723,7 +749,12 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       } else {
         setIdleModalOpen(true);
       }
-      const updatedUser = { ...user, lastMiningTimestamp: now };
+      const isUserAdmin = user.isAdmin ?? (
+        user.email.toLowerCase() === 'vadimmartin@ukr.net' ||
+        user.email === 'demo@freebitco.io' ||
+        user.email.toLowerCase().includes('admin')
+      );
+      const updatedUser = { ...user, isAdmin: isUserAdmin, lastMiningTimestamp: now };
       localStorage.setItem('freebitco_session', updatedUser.email);
       setCurrentUser(updatedUser);
       syncUserToStorage(updatedUser);
@@ -791,6 +822,11 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         return;
       }
 
+      const isUserAdmin = (
+        authModal.email.toLowerCase() === 'vadimmartin@ukr.net' ||
+        authModal.email.toLowerCase().includes('admin')
+      );
+
       const newUser = {
         email: authModal.email,
         password: authModal.password,
@@ -799,12 +835,13 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         wallet: 'bc1q' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
         refId: Math.floor(100000 + Math.random() * 900000).toString(),
         refShare: 0,
-        balance: 1000, // 1000 free signup satoshi bonus!
-        cumulativeClaims: 0,
-        rollsCount: 0,
-        loyaltyPoints: 0,
-        tier: 'Bronze',
-        twoFactorEnabled: false
+        balance: isUserAdmin ? 5000000 : 1000, // 5M SAT for admin, 1000 for regular users
+        cumulativeClaims: isUserAdmin ? 150 : 0,
+        rollsCount: isUserAdmin ? 150 : 0,
+        loyaltyPoints: isUserAdmin ? 5000 : 0,
+        tier: isUserAdmin ? 'Platinum' : 'Bronze',
+        twoFactorEnabled: false,
+        isAdmin: isUserAdmin
       };
 
       accounts.push(newUser);
@@ -1295,7 +1332,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
               </button>
 
               {/* ADMIN PANEL MENU ITEM */}
-              {(currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email === 'demo@freebitco.io') && (
+              {(currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email?.toLowerCase() === 'vadimmartin@ukr.net' || currentUser?.email === 'demo@freebitco.io') && (
                 <button
                   onClick={() => { setIsBotRunning(false); setActiveDashboardTab('admin'); }}
                   className={cn(
@@ -2508,7 +2545,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             )}
 
             {/* TAB 7: ADMIN PANEL */}
-            {activeDashboardTab === 'admin' && (currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email === 'demo@freebitco.io') && (
+            {activeDashboardTab === 'admin' && (currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email?.toLowerCase() === 'vadimmartin@ukr.net' || currentUser?.email === 'demo@freebitco.io') && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8" style={{ fontFamily: 'Georgia' }}>
                 
                 {/* Admin Header Banner */}
