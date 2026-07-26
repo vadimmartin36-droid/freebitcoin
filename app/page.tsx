@@ -195,6 +195,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [adminUserSearchQuery, setAdminUserSearchQuery] = React.useState<string>('');
   const [adminUserRoleFilter, setAdminUserRoleFilter] = React.useState<string>('all');
   const [adminUserTierFilter, setAdminUserTierFilter] = React.useState<string>('all');
+  const [adminUserCurrentPage, setAdminUserCurrentPage] = React.useState<number>(1);
   const [editingUser, setEditingUser] = React.useState<any | null>(null);
   const [editUserBalanceInput, setEditUserBalanceInput] = React.useState<string>('');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = React.useState<boolean>(false);
@@ -250,14 +251,14 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     }
   }, []);
 
-  // Real-time synchronization of users and payouts for admin panel
+  // Real-time synchronization of users and payouts for admin panel and current user
   React.useEffect(() => {
     const timer = setTimeout(() => {
       refreshAdminUsersList();
       refreshAdminPayoutNotifications();
     }, 0);
     const handleStorageChange = (e: StorageEvent) => {
-      if (!e.key || e.key === 'freebitco_accounts' || e.key === 'freebitco_admin_payout_notifications') {
+      if (!e.key || e.key === 'freebitco_accounts' || e.key === 'freebitco_admin_payout_notifications' || e.key.startsWith('freebitco_payout_history_')) {
         refreshAdminUsersList();
         refreshAdminPayoutNotifications();
       }
@@ -266,6 +267,23 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     const syncInterval = setInterval(() => {
       refreshAdminUsersList();
       refreshAdminPayoutNotifications();
+      
+      const session = localStorage.getItem('freebitco_session');
+      if (session) {
+        const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
+        const user = accounts.find((a: any) => a.email.toLowerCase() === session.toLowerCase());
+        if (user) {
+          setCurrentUser(prev => JSON.stringify(prev) !== JSON.stringify(user) ? user : prev);
+        }
+        const histKey = `freebitco_payout_history_${session.toLowerCase()}`;
+        const savedHist = localStorage.getItem(histKey);
+        if (savedHist) {
+          try {
+            const parsedHist = JSON.parse(savedHist);
+            setPayoutHistory(prev => JSON.stringify(prev) !== JSON.stringify(parsedHist) ? parsedHist : prev);
+          } catch (e) {}
+        }
+      }
     }, 1500);
     return () => {
       clearTimeout(timer);
@@ -289,7 +307,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       const userHistKey = `freebitco_payout_history_${approvedNotif.userEmail.toLowerCase()}`;
       const userHist = JSON.parse(localStorage.getItem(userHistKey) || '[]');
       const finalHist = userHist.map((tx: any) => {
-        if (tx.reqId === notifId || (tx.status === 'В обработке' && (tx.amount + tx.fee === approvedNotif.amountSat || tx.amount === approvedNotif.netAmountSat))) {
+        if (tx.reqId === notifId || (tx.status === 'Ожидание' && (tx.amount + tx.fee === approvedNotif.amountSat || tx.amount === approvedNotif.netAmountSat))) {
           return { ...tx, status: 'Завершен' as const };
         }
         return tx;
@@ -333,8 +351,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       const userHistKey = `freebitco_payout_history_${targetNotif.userEmail.toLowerCase()}`;
       const userHist = JSON.parse(localStorage.getItem(userHistKey) || '[]');
       const finalHist = userHist.map((tx: any) => {
-        if (tx.reqId === notifId || (tx.status === 'В обработке' && (tx.amount + tx.fee === targetNotif.amountSat || tx.amount === targetNotif.netAmountSat))) {
-          return { ...tx, status: 'Отменен' as const };
+        if (tx.reqId === notifId || (tx.status === 'Ожидание' && (tx.amount + tx.fee === targetNotif.amountSat || tx.amount === targetNotif.netAmountSat))) {
+          return { ...tx, status: 'Отклонено' as const };
         }
         return tx;
       });
@@ -464,7 +482,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     fee: number;
     address: string;
     date: string;
-    status: 'Завершен' | 'В обработке' | 'Отменен';
+    status: 'Завершен' | 'Ожидание' | 'Отклонено';
     txid: string;
   }>>([
     {
@@ -555,7 +573,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       fee,
       address: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
       date: formattedDate,
-      status: payoutSpeed === 'instant' ? ('Завершен' as const) : ('В обработке' as const),
+      status: payoutSpeed === 'instant' ? ('Завершен' as const) : ('Ожидание' as const),
       txid: `${timestamp.toString(16)}...8f2a`
     };
 
@@ -2731,7 +2749,9 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                             <td className="py-3">
                               <span className={cn(
                                 "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                tx.status === 'Завершен' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                tx.status === 'Завершен' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : 
+                                tx.status === 'Отклонено' ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
+                                "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                               )}>
                                 {tx.status}
                               </span>
@@ -3117,130 +3137,27 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     <div>
                       <h3 className="text-base font-bold text-white flex items-center gap-2">
                         <Users className="w-5 h-5 text-amber-400" />
-                        Управление всеми пользователями сайта ({adminUsersList.length})
+                        Управление всеми пользователями
                       </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Полный реестр аккаунтов. Управление балансами, статусами VIP, правами доступа и кошельками.</p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => {
-                          const updated = adminUsersList.map((u: any) => ({
-                            ...u,
-                            balance: (u.balance || 0) + 50000000
-                          }));
-                          localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
-                          setAdminUsersList(updated);
-                          if (currentUser) {
-                            const found = updated.find((u: any) => u.email.toLowerCase() === currentUser.email.toLowerCase());
-                            if (found) setCurrentUser(found);
-                          }
-                          setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Начислено по 50,000,000 SAT всем пользователям!`, type: 'user' }, ...prev]);
-                          alert('Успешно начислено по 50,000,000 SAT всем зарегистрированным пользователям!');
-                        }}
-                        className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 border border-emerald-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                      >
-                        <Gift className="w-3.5 h-3.5" />
-                        🎁 Всем +50M SAT
-                      </button>
-                      <button
-                        onClick={() => setIsAddUserModalOpen(true)}
-                        className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                      >
-                        <UserPlus className="w-3.5 h-3.5" />
-                        + Добавить пользователя
-                      </button>
-                      <button
-                        onClick={refreshAdminUsersList}
-                        className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                        Обновить
-                      </button>
+                      <p className="text-xs text-slate-400 mt-1">Редактирование балансов, ролей и удаление аккаунтов</p>
                     </div>
                   </div>
-
-                  {/* Summary Metric Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Всего аккаунтов</div>
-                      <div className="text-lg font-extrabold text-white mt-1">{adminUsersList.length}</div>
-                    </div>
-                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                      <div className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Администраторы</div>
-                      <div className="text-lg font-extrabold text-amber-300 mt-1">{adminUsersList.filter((u: any) => u.isAdmin).length}</div>
-                    </div>
-                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                      <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Балансы (SAT)</div>
-                      <div className="text-sm sm:text-base font-extrabold text-emerald-400 mt-1 truncate" style={{ fontFamily: 'Verdana' }}>
-                        {adminUsersList.reduce((acc: number, u: any) => acc + (u.balance || 0), 0).toLocaleString('en-US')}
-                      </div>
-                    </div>
-                    <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                      <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Всего Клеймов</div>
-                      <div className="text-lg font-extrabold text-cyan-300 mt-1" style={{ fontFamily: 'Verdana' }}>
-                        {adminUsersList.reduce((acc: number, u: any) => acc + (u.cumulativeClaims || 0), 0).toLocaleString('en-US')}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Search and Filters Bar */}
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
-                    <div className="sm:col-span-6 relative">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Поиск по имени, email или BTC кошельку..."
-                        value={adminUserSearchQuery}
-                        onChange={(e) => setAdminUserSearchQuery(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 focus:border-amber-500/50 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-3">
-                      <select
-                        value={adminUserRoleFilter}
-                        onChange={(e) => setAdminUserRoleFilter(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 focus:border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                      >
-                        <option value="all">Все роли</option>
-                        <option value="admin">Только Администраторы 👑</option>
-                        <option value="user">Только Пользователи 👤</option>
-                      </select>
-                    </div>
-
-                    <div className="sm:col-span-3">
-                      <select
-                        value={adminUserTierFilter}
-                        onChange={(e) => setAdminUserTierFilter(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 focus:border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                      >
-                        <option value="all">Все VIP Уровни</option>
-                        <option value="Bronze">Bronze</option>
-                        <option value="Silver">Silver</option>
-                        <option value="Gold">Gold</option>
-                        <option value="Platinum">Platinum</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Users Table */}
-                  <div className="overflow-x-auto rounded-2xl border border-white/5 bg-black/20">
-                    <table className="w-full text-left text-xs">
+                  <div className="overflow-x-auto relative">
+                    <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider bg-white/[0.02]">
+                        <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
                           <th className="py-3 px-4 font-bold">Пользователь</th>
-                          <th className="py-3 px-3 font-bold">Дата и время регистрации</th>
+                          <th className="py-3 px-3 font-bold">Регистрация</th>
                           <th className="py-3 px-3 font-bold">Роль</th>
                           <th className="py-3 px-3 font-bold">Баланс (SAT)</th>
-                          <th className="py-3 px-3 font-bold">VIP Уровень</th>
-                          <th className="py-3 px-3 font-bold">Активность</th>
-                          <th className="py-3 px-4 font-bold text-right">Управление</th>
+                          <th className="py-3 px-3 font-bold">Уровень</th>
+                          <th className="py-3 px-3 font-bold">Статистика</th>
+                          <th className="py-3 px-4 font-bold text-right">Действия</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {adminUsersList
-                          .filter((u: any) => {
+                        {(() => {
+                          const filteredUsers = adminUsersList.filter((u: any) => {
                             const query = adminUserSearchQuery.toLowerCase().trim();
                             const matchesQuery = !query || 
                               u.name?.toLowerCase().includes(query) ||
@@ -3256,9 +3173,25 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                               u.tier === adminUserTierFilter;
 
                             return matchesQuery && matchesRole && matchesTier;
-                          })
-                          .map((u: any, idx: number) => (
-                            <tr key={u.email || idx} className="hover:bg-white/[0.02] transition-colors">
+                          });
+
+                          const pageSize = 10;
+                          const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
+                          const currentPage = Math.min(adminUserCurrentPage, totalPages);
+                          const startIndex = (currentPage - 1) * pageSize;
+                          const currentUsersSlice = filteredUsers.slice(startIndex, startIndex + pageSize);
+
+                          return (
+                            <>
+                              {currentUsersSlice.length === 0 ? (
+                                <tr>
+                                  <td colSpan={7} className="text-center py-8 text-slate-500 font-mono text-xs">
+                                    Пользователи не найдены
+                                  </td>
+                                </tr>
+                              ) : (
+                                currentUsersSlice.map((u: any, idx: number) => (
+                                  <tr key={u.email || idx} className="hover:bg-white/[0.02] transition-colors">
                               <td className="py-3 px-4 font-mono">
                                 <div className="flex items-center gap-3">
                                   <img src={u.avatar || 'https://picsum.photos/seed/avatar1/100/100'} alt="" className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0" />
@@ -3356,7 +3289,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                                       });
                                       localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
                                       setAdminUsersList(updated);
-                                      if (currentUser.email === u.email) {
+                                      if (currentUser && currentUser.email === u.email) {
                                         setCurrentUser({ ...currentUser, balance: currentUser.balance + 10000 });
                                       }
                                       setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Начислено +10,000 SAT пользователю ${u.email}`, type: 'user' }, ...prev]);
@@ -3377,7 +3310,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                                       });
                                       localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
                                       setAdminUsersList(updated);
-                                      if (currentUser.email === u.email) {
+                                      if (currentUser && currentUser.email === u.email) {
                                         setCurrentUser({ ...currentUser, isAdmin: !currentUser.isAdmin });
                                       }
                                       setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Изменена роль пользователя ${u.email} (Admin: ${!u.isAdmin})`, type: 'user' }, ...prev]);
@@ -3408,7 +3341,42 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                                ))
+                              )}
+
+                              {totalPages > 1 && (
+                                <tr>
+                                  <td colSpan={7} className="py-3 px-4 bg-black/40 border-t border-white/5">
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                                      <div className="text-slate-400 font-mono text-[11px]">
+                                        Показано <span className="text-white font-bold">{startIndex + 1}</span>–<span className="text-white font-bold">{Math.min(startIndex + pageSize, filteredUsers.length)}</span> из <span className="text-amber-400 font-bold">{filteredUsers.length}</span> пользователей (по 10 на странице)
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <button
+                                          onClick={() => setAdminUserCurrentPage(prev => Math.max(prev - 1, 1))}
+                                          disabled={currentPage === 1}
+                                          className="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5 text-white rounded-lg border border-white/10 font-bold transition-all text-[11px]"
+                                        >
+                                          ← Назад
+                                        </button>
+                                        <span className="px-3 py-1 bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg font-mono font-bold text-[11px]">
+                                          {currentPage} / {totalPages}
+                                        </span>
+                                        <button
+                                          onClick={() => setAdminUserCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                          disabled={currentPage === totalPages}
+                                          className="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5 text-white rounded-lg border border-white/10 font-bold transition-all text-[11px]"
+                                        >
+                                          Вперед →
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </>
+                          );
+                        })()}
                       </tbody>
                     </table>
                   </div>
