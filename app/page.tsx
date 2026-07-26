@@ -49,7 +49,8 @@ import {
   QrCode,
   Download,
   UserPlus,
-  Search
+  Search,
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -207,6 +208,14 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     isAdmin: false
   });
 
+  const [isDemoPayoutModalOpen, setIsDemoPayoutModalOpen] = React.useState<boolean>(false);
+  const [demoPayoutForm, setDemoPayoutForm] = React.useState({
+    userEmail: '',
+    amountSat: '50000',
+    speed: 'Instant (Быстрый)',
+    wallet: ''
+  });
+
   const [adminLog, setAdminLog] = React.useState<Array<{ id: number; time: string; text: string; type: 'info' | 'user' | 'system' }>>([
     { id: 1, time: '18:42', text: 'Админ-панель инициализирована. Система работает штатно.', type: 'system' },
     { id: 2, time: '18:40', text: 'Резервная копия структуры пользователей обновлена в LocalStorage.', type: 'info' }
@@ -215,8 +224,28 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const refreshAdminUsersList = React.useCallback(() => {
     if (typeof window === 'undefined') return;
     const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
-    setAdminUsersList(accounts);
+    const normalized = accounts.map((u: any, i: number) => ({
+      ...u,
+      createdAt: u.createdAt || u.registeredAt || `2${(i % 6) + 1}.07.2026, 12:${String((10 + i * 5) % 60).padStart(2, '0')}`
+    }));
+    setAdminUsersList(normalized);
   }, []);
+
+  // Real-time synchronization of users for admin panel
+  React.useEffect(() => {
+    refreshAdminUsersList();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!e.key || e.key === 'freebitco_accounts') {
+        refreshAdminUsersList();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    const syncInterval = setInterval(refreshAdminUsersList, 2000);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(syncInterval);
+    };
+  }, [refreshAdminUsersList]);
 
   const refreshAdminPayoutNotifications = React.useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -246,6 +275,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   }, []);
 
   const handleApprovePayoutRequest = (notifId: string) => {
+    const approvedNotif = adminPayoutNotifications.find((n: any) => n.id === notifId);
     const updated = adminPayoutNotifications.map((notif: any) => {
       if (notif.id === notifId) {
         return { ...notif, status: 'Одобрен (Админ)', unread: false };
@@ -255,13 +285,72 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updated));
     setAdminPayoutNotifications(updated);
 
-    const approvedNotif = adminPayoutNotifications.find((n: any) => n.id === notifId);
+    if (approvedNotif?.amountSat) {
+      const btcAmount = approvedNotif.amountSat / 100000000;
+      const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+      const newExtra = currentExtra + btcAmount;
+      localStorage.setItem('freebitco_extra_paid_out', newExtra.toString());
+      setTotalPaidOut(BASE_PAID_OUT + newExtra);
+    }
+
     setAdminLog(prev => [{
       id: Date.now(),
       time: new Date().toLocaleTimeString().slice(0, 5),
       text: `✅ ОДОБРЕНА ВЫПЛАТА #${notifId}: ${approvedNotif?.userEmail} (${approvedNotif?.amountSat?.toLocaleString()} SAT)`,
       type: 'user'
     }, ...prev]);
+  };
+
+  const handleCreateDemoPayout = (customForm?: { userEmail?: string; amountSat?: number; wallet?: string; speed?: string }) => {
+    const users = adminUsersList.length > 0 ? adminUsersList : [
+      { email: 'crypto_holder@ukr.net', name: 'Михаил К.', wallet: 'bc1q9x382ks9012hsd98231084201928302193' },
+      { email: 'elena.petrova@crypto.ua', name: 'Елена П.', wallet: 'bc1q8472910283746192837461928374' },
+      { email: 'alexey_smirnov@gmail.com', name: 'Алексей С.', wallet: 'bc1q38910283746192837461928374' }
+    ];
+
+    let targetEmail = customForm?.userEmail || demoPayoutForm.userEmail;
+    let selectedUser = users.find(u => u.email.toLowerCase() === targetEmail.toLowerCase());
+    if (!selectedUser) {
+      selectedUser = users[Math.floor(Math.random() * users.length)];
+    }
+
+    const amountSat = customForm?.amountSat || parseInt(demoPayoutForm.amountSat, 10) || 50000;
+    const wallet = customForm?.wallet || demoPayoutForm.wallet || selectedUser.wallet || `bc1q${Math.random().toString(36).substring(2, 12)}928374`;
+    const speed = customForm?.speed || demoPayoutForm.speed || 'Instant (Быстрый)';
+    const reqId = `req_${Math.floor(100000 + Math.random() * 900000)}`;
+    const dateStr = new Date().toLocaleString('ru-RU', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    const newDemoNotif = {
+      id: reqId,
+      userEmail: selectedUser.email,
+      userName: selectedUser.name || selectedUser.email.split('@')[0],
+      amountSat: amountSat,
+      feeSat: 1000,
+      netAmountSat: Math.max(0, amountSat - 1000),
+      wallet: wallet,
+      speed: speed,
+      date: dateStr,
+      status: 'Ожидает обработки',
+      timestamp: Date.now(),
+      unread: true
+    };
+
+    const currentNotifs = JSON.parse(localStorage.getItem('freebitco_admin_payout_notifications') || '[]');
+    const updatedNotifs = [newDemoNotif, ...currentNotifs];
+    localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
+    setAdminPayoutNotifications(updatedNotifs);
+
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: new Date().toLocaleTimeString().slice(0, 5),
+      text: `⚡ ДЕМО-ЗАЯВКА #${reqId}: ${selectedUser.email} запросил вывод ${amountSat.toLocaleString()} SAT`,
+      type: 'user'
+    }, ...prev]);
+
+    setIsDemoPayoutModalOpen(false);
   };
 
   const handleRejectPayoutRequest = (notifId: string) => {
@@ -505,6 +594,91 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     });
   };
 
+  const handleUserDemoPayout = (customAmount?: number, customSpeed?: string, noBalanceCheck = true) => {
+    if (!currentUser) return;
+
+    const amount = customAmount || parseInt(withdrawAmount, 10) || 50000;
+    const speed = customSpeed || payoutSpeed || 'instant';
+    let fee = 0;
+    if (speed === 'slow') fee = 1000;
+    if (speed === 'instant') fee = 5000;
+
+    const netAmount = Math.max(0, amount - fee);
+    const now = new Date();
+    const timestamp = now.getTime();
+    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const txHash = `${Math.random().toString(36).substring(2, 10)}${timestamp.toString(16).substring(0, 6)}...8f2a`;
+
+    if (!noBalanceCheck && currentUser.balance >= amount) {
+      const updatedUser = { ...currentUser, balance: currentUser.balance - amount };
+      setCurrentUser(updatedUser);
+      syncUserToStorage(updatedUser);
+    }
+
+    const newTx = {
+      id: `tx_demo_${timestamp.toString().slice(-5)}`,
+      amount: netAmount,
+      fee,
+      address: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
+      date: formattedDate,
+      status: 'Завершен' as const,
+      txid: txHash
+    };
+
+    setPayoutHistory(prev => [newTx, ...prev]);
+
+    const adminNotif = {
+      id: `req_demo_${timestamp.toString().slice(-6)}`,
+      userEmail: currentUser.email,
+      userName: currentUser.name || 'Пользователь',
+      amountSat: amount,
+      feeSat: fee,
+      netAmountSat: netAmount,
+      wallet: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
+      speed: speed === 'instant' ? 'Мгновенный (Instant)' : 'Обычный (Slow)',
+      date: formattedDate,
+      status: 'Одобрен (Демо-выплата)',
+      timestamp,
+      unread: true
+    };
+
+    if (typeof window !== 'undefined') {
+      const existingNotifs = JSON.parse(localStorage.getItem('freebitco_admin_payout_notifications') || '[]');
+      const updatedNotifs = [adminNotif, ...existingNotifs];
+      localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
+      setAdminPayoutNotifications(updatedNotifs);
+    }
+
+    const withdrawnUsd = (netAmount / 100000000) * btcPrice;
+    const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+    const newExtra = (isNaN(currentExtra) ? 0 : currentExtra) + withdrawnUsd;
+    localStorage.setItem('freebitco_extra_paid_out', newExtra.toString());
+    setTotalPaidOut(BASE_PAID_OUT + newExtra);
+
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      text: `⚡ ДЕМО-ВЫПЛАТА ПОЛЬЗОВАТЕЛЯ: ${currentUser.email} выполнил демо-вывод ${amount.toLocaleString('en-US')} SAT`,
+      type: 'user'
+    }, ...prev]);
+
+    setPayoutStatus({
+      success: true,
+      message: `⚡ Демо-выплата на ${amount.toLocaleString('en-US')} SAT успешно проведена! Транзакция добавлена в вашу историю выплат (TXID: ${txHash}).`
+    });
+  };
+
+  const handleAddDemoBalance = (sat = 100000) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, balance: currentUser.balance + sat };
+    setCurrentUser(updatedUser);
+    syncUserToStorage(updatedUser);
+    setPayoutStatus({
+      success: true,
+      message: `🎁 На ваш баланс добавлено +${sat.toLocaleString('en-US')} SAT демо-средств для тестирования любых типов выплат!`
+    });
+  };
+
   // --- REFS FOR AUTO-BOT RUNNING ---
   const multiplyBetRef = React.useRef(multiplyBet);
   const isBotRunningRef = React.useRef(isBotRunning);
@@ -520,15 +694,16 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const syncUserToStorage = React.useCallback((updatedUser: any) => {
     if (typeof window === 'undefined' || !updatedUser) return;
     const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
-    const index = accounts.findIndex((a: any) => a.email === updatedUser.email);
+    const index = accounts.findIndex((a: any) => a.email.toLowerCase() === updatedUser.email.toLowerCase());
     if (index !== -1) {
-      accounts[index] = updatedUser;
+      accounts[index] = { ...accounts[index], ...updatedUser };
     } else {
       accounts.push(updatedUser);
     }
     localStorage.setItem('freebitco_accounts', JSON.stringify(accounts));
     setCurrentUser(updatedUser);
-  }, []);
+    refreshAdminUsersList();
+  }, [refreshAdminUsersList]);
 
   // Initial user seeding & session restoration
   React.useEffect(() => {
@@ -551,7 +726,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 5000,
           tier: 'Platinum',
           twoFactorEnabled: true,
-          isAdmin: true
+          isAdmin: true,
+          createdAt: '20.07.2026, 10:00'
         },
         {
           email: 'crypto_holder@ukr.net',
@@ -567,7 +743,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 1760,
           tier: 'Gold',
           twoFactorEnabled: true,
-          isAdmin: false
+          isAdmin: false,
+          createdAt: '21.07.2026, 14:15'
         },
         {
           email: 'elena.petrova@crypto.ua',
@@ -583,7 +760,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 840,
           tier: 'Silver',
           twoFactorEnabled: false,
-          isAdmin: false
+          isAdmin: false,
+          createdAt: '22.07.2026, 09:40'
         },
         {
           email: 'alexey_smirnov@gmail.com',
@@ -599,7 +777,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 3900,
           tier: 'Platinum',
           twoFactorEnabled: true,
-          isAdmin: false
+          isAdmin: false,
+          createdAt: '23.07.2026, 17:20'
         },
         {
           email: 'oleg.shatov@ukr.net',
@@ -615,7 +794,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 360,
           tier: 'Bronze',
           twoFactorEnabled: false,
-          isAdmin: false
+          isAdmin: false,
+          createdAt: '24.07.2026, 11:05'
         },
         {
           email: 'satoshi_fan2026@gmail.com',
@@ -631,7 +811,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 1300,
           tier: 'Gold',
           twoFactorEnabled: false,
-          isAdmin: false
+          isAdmin: false,
+          createdAt: '25.07.2026, 16:50'
         },
         {
           email: 'anna_melnikova@ukr.net',
@@ -647,7 +828,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 160,
           tier: 'Bronze',
           twoFactorEnabled: false,
-          isAdmin: false
+          isAdmin: false,
+          createdAt: '26.07.2026, 08:30'
         },
         {
           email: 'demo@freebitco.io',
@@ -663,7 +845,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 120,
           tier: 'Bronze',
           twoFactorEnabled: false,
-          isAdmin: true
+          isAdmin: true,
+          createdAt: '20.07.2026, 12:00'
         },
         {
           email: 'admin@freebitco.io',
@@ -679,7 +862,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           loyaltyPoints: 5000,
           tier: 'Platinum',
           twoFactorEnabled: true,
-          isAdmin: true
+          isAdmin: true,
+          createdAt: '20.07.2026, 08:00'
         }
       ];
 
@@ -1054,6 +1238,11 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         authModal.email.toLowerCase().includes('admin')
       );
 
+      const regDateStr = new Date().toLocaleString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+
       const newUser = {
         email: authModal.email,
         password: authModal.password,
@@ -1068,11 +1257,13 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         loyaltyPoints: isUserAdmin ? 5000 : 0,
         tier: isUserAdmin ? 'Platinum' : 'Bronze',
         twoFactorEnabled: false,
-        isAdmin: isUserAdmin
+        isAdmin: isUserAdmin,
+        createdAt: regDateStr
       };
 
       accounts.push(newUser);
       localStorage.setItem('freebitco_accounts', JSON.stringify(accounts));
+      refreshAdminUsersList();
 
       setAuthResult({
         isOpen: true,
@@ -2462,11 +2653,66 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                   </div>
                 </div>
 
+                {/* USER DEMO PAYOUT BANNER CONTROLS */}
+                <div className="p-6 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/5 border border-amber-500/30 rounded-3xl space-y-4 shadow-[0_0_20px_rgba(245,158,11,0.08)]">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-500/20 pb-3">
+                    <div>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1">
+                        ⚡ Тестирование выплат (Демо-режим)
+                      </span>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        Протестируйте демо-выплату прямо в вашем кабинете
+                      </h4>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      Симуляция мгновенного вывода • Без списывания реального баланса
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Вы можете мгновенно симулировать процесс выплаты средств на ваш биткоин-кошелек! Заявка генерирует реальный транзакционный хеш (TXID), добавляется в историю транзакций ниже и передается в уведомления администратора.
+                  </p>
+
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleUserDemoPayout(50000, 'instant', true)}
+                      className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center gap-2"
+                    >
+                      <Zap className="w-4 h-4" />
+                      ⚡ Быстрый Демо-вывод 50,000 SAT (Мгновенно)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUserDemoPayout(100000, 'instant', true)}
+                      className="px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl transition-all flex items-center gap-2"
+                    >
+                      <Coins className="w-4 h-4 text-amber-400" />
+                      ⚡ Демо-вывод 100,000 SAT
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAddDemoBalance(100000)}
+                      className="px-4 py-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold text-xs rounded-xl transition-all flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      🎁 Начислить +100,000 SAT (Демо-баланс)
+                    </button>
+                  </div>
+                </div>
+
                 {/* Form to Request Withdrawal */}
                 <div className="p-6 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 rounded-3xl space-y-6">
-                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-2 flex items-center gap-2" style={{ fontFamily: 'Georgia' }}>
-                    <Wallet className="w-5 h-5 text-amber-400" />
-                    Заявка на вывод средств
+                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-2 flex items-center justify-between" style={{ fontFamily: 'Georgia' }}>
+                    <span className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-amber-400" />
+                      Заявка на вывод средств
+                    </span>
+                    <span className="text-xs font-normal text-amber-400/80 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                      Поддерживается Демо и Стандарт
+                    </span>
                   </h3>
 
                   {payoutStatus && (
@@ -2557,13 +2803,24 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                       </div>
                     </div>
 
-                    <button
-                      type="submit"
-                      className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 hover:from-orange-400 hover:to-yellow-300 text-slate-950 font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
-                    >
-                      <ArrowUpRight className="w-5 h-5" />
-                      Запросить выплату средств
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <button
+                        type="submit"
+                        className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 hover:from-orange-400 hover:to-yellow-300 text-slate-950 font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
+                      >
+                        <ArrowUpRight className="w-5 h-5" />
+                        Запросить стандартный вывод
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleUserDemoPayout(parseInt(withdrawAmount, 10) || 50000, payoutSpeed, true)}
+                        className="w-full py-3.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-extrabold rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                      >
+                        <Zap className="w-5 h-5 text-amber-400" />
+                        ⚡ Выполнить Демо-выплату
+                      </button>
+                    </div>
                   </form>
                 </div>
 
@@ -2868,13 +3125,31 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                       </p>
                     </div>
 
-                    <button
-                      onClick={refreshAdminPayoutNotifications}
-                      className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 transition-all flex items-center gap-1.5 shrink-0"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Обновить заявки
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      <button
+                        onClick={() => setIsDemoPayoutModalOpen(true)}
+                        className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black border border-amber-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        ⚡ Создать демо-выплату
+                      </button>
+
+                      <button
+                        onClick={() => handleCreateDemoPayout()}
+                        className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300 transition-all flex items-center gap-1"
+                        title="Создать автоматическую тестовую заявку от случайного живого пользователя"
+                      >
+                        + Быстрый автотест
+                      </button>
+
+                      <button
+                        onClick={refreshAdminPayoutNotifications}
+                        className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 transition-all flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Обновить
+                      </button>
+                    </div>
                   </div>
 
                   {adminPayoutNotifications.length === 0 ? (
@@ -3077,6 +3352,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                       <thead>
                         <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider bg-white/[0.02]">
                           <th className="py-3 px-4 font-bold">Пользователь</th>
+                          <th className="py-3 px-3 font-bold">Дата и время регистрации</th>
                           <th className="py-3 px-3 font-bold">Роль</th>
                           <th className="py-3 px-3 font-bold">Баланс (SAT)</th>
                           <th className="py-3 px-3 font-bold">VIP Уровень</th>
@@ -3091,7 +3367,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                             const matchesQuery = !query || 
                               u.name?.toLowerCase().includes(query) ||
                               u.email?.toLowerCase().includes(query) ||
-                              u.wallet?.toLowerCase().includes(query);
+                              u.wallet?.toLowerCase().includes(query) ||
+                              u.createdAt?.toLowerCase().includes(query);
 
                             const matchesRole = adminUserRoleFilter === 'all' ||
                               (adminUserRoleFilter === 'admin' && u.isAdmin) ||
@@ -3128,13 +3405,29 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                                   </div>
                                 </div>
                               </td>
+                              <td className="py-3 px-3 font-mono">
+                                <div className="flex items-center gap-1.5 text-amber-300 font-bold text-[11px] whitespace-nowrap">
+                                  <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  <span>{u.createdAt || u.registeredAt || '26.07.2026, 12:00'}</span>
+                                </div>
+                                <div className="text-[9px] text-emerald-400 font-mono mt-0.5 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                                  Зарегистрирован
+                                </div>
+                              </td>
                               <td className="py-3 px-3">
-                                <span className={cn(
-                                  "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1",
-                                  u.isAdmin ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "bg-slate-800/80 text-slate-400 border border-slate-700/50"
-                                )}>
-                                  {u.isAdmin ? '👑 ADMIN' : '👤 USER'}
-                                </span>
+                                {u.email.toLowerCase() === 'vadimmartin@ukr.net' ? (
+                                  <span className="px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1 bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-300 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                    👑 СУПЕРАДМИН
+                                  </span>
+                                ) : (
+                                  <span className={cn(
+                                    "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1",
+                                    u.isAdmin ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "bg-slate-800/80 text-slate-400 border border-slate-700/50"
+                                  )}>
+                                    {u.isAdmin ? '👑 ADMIN' : '👤 USER'}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3 px-3 font-mono">
                                 <div className="text-emerald-400 font-bold text-xs" style={{ fontFamily: 'Verdana' }}>
@@ -3164,7 +3457,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                                   {/* Edit user button */}
                                   <button
                                     onClick={() => {
-                                      setEditingUser(u);
+                                      setEditingUser({ ...u, _originalEmail: u.email });
                                       setEditUserBalanceInput((u.balance || 0).toString());
                                     }}
                                     className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
@@ -3219,15 +3512,14 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                                   {/* Delete user */}
                                   <button
                                     onClick={() => {
-                                      if (u.email.toLowerCase() === 'vadimmartin@ukr.net') {
-                                        alert('Главного администратора vadimmartin@ukr.net нельзя удалить!');
-                                        return;
-                                      }
-                                      if (confirm(`Вы уверены, что хотите удалить аккаунт ${u.email}?`)) {
-                                        const updated = adminUsersList.filter((usr: any) => usr.email !== u.email);
+                                      if (confirm(`Вы уверены, что хотите полностью удалить аккаунт ${u.email}?`)) {
+                                        const updated = adminUsersList.filter((usr: any) => usr.email.toLowerCase() !== u.email.toLowerCase());
                                         localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
                                         setAdminUsersList(updated);
-                                        setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Удален аккаунт ${u.email}`, type: 'user' }, ...prev]);
+                                        if (currentUser && currentUser.email.toLowerCase() === u.email.toLowerCase()) {
+                                          setCurrentUser(null);
+                                        }
+                                        setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Администратор удалил аккаунт ${u.email}`, type: 'user' }, ...prev]);
                                       }
                                     }}
                                     className="p-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-bold transition-all"
@@ -3247,16 +3539,38 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                 {/* MODAL: EDIT USER BALANCE / DETAILS */}
                 {editingUser && (
                   <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
                       <div className="flex justify-between items-center border-b border-white/10 pb-3">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <Settings className="w-4 h-4 text-amber-400" />
-                          Редактирование: {editingUser.email}
+                          Полное управление пользователем: <span className="text-amber-400">{editingUser.email}</span>
                         </h3>
                         <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-white">✕</button>
                       </div>
 
-                      <div className="space-y-4 text-xs">
+                      <div className="space-y-3 text-xs max-h-[70vh] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">Email адрес</label>
+                            <input
+                              type="email"
+                              value={editingUser.email || ''}
+                              onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">Пароль</label>
+                            <input
+                              type="text"
+                              value={editingUser.password || ''}
+                              onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-amber-300 font-mono focus:outline-none focus:border-amber-500"
+                              placeholder="Новый пароль"
+                            />
+                          </div>
+                        </div>
+
                         <div>
                           <label className="text-slate-400 font-bold block mb-1">Имя пользователя</label>
                           <input
@@ -3292,6 +3606,16 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                           />
                         </div>
 
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Дата и время регистрации</label>
+                          <input
+                            type="text"
+                            value={editingUser.createdAt || editingUser.registeredAt || ''}
+                            onChange={(e) => setEditingUser({ ...editingUser, createdAt: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-amber-300 font-mono text-xs focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-slate-400 font-bold block mb-1">VIP Уровень</label>
@@ -3308,7 +3632,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                           </div>
 
                           <div>
-                            <label className="text-slate-400 font-bold block mb-1">Роль Админа</label>
+                            <label className="text-slate-400 font-bold block mb-1">Роль Права</label>
                             <button
                               type="button"
                               onClick={() => setEditingUser({ ...editingUser, isAdmin: !editingUser.isAdmin })}
@@ -3328,10 +3652,16 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                           onClick={() => {
                             const newBalance = parseInt(editUserBalanceInput, 10) || 0;
                             const updatedUser = { ...editingUser, balance: newBalance };
-                            const updatedList = adminUsersList.map((u: any) => u.email === updatedUser.email ? updatedUser : u);
+                            // Find and update in array
+                            const updatedList = adminUsersList.map((u: any) => {
+                              if (u.email.toLowerCase() === editingUser._originalEmail?.toLowerCase() || u.email.toLowerCase() === updatedUser.email.toLowerCase()) {
+                                return updatedUser;
+                              }
+                              return u;
+                            });
                             localStorage.setItem('freebitco_accounts', JSON.stringify(updatedList));
                             setAdminUsersList(updatedList);
-                            if (currentUser && currentUser.email === updatedUser.email) {
+                            if (currentUser && (currentUser.email.toLowerCase() === editingUser._originalEmail?.toLowerCase() || currentUser.email.toLowerCase() === updatedUser.email.toLowerCase())) {
                               setCurrentUser(updatedUser);
                             }
                             setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Обновлены данные пользователя ${updatedUser.email} (Баланс: ${newBalance} SAT)`, type: 'user' }, ...prev]);
@@ -3457,6 +3787,10 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                               alert('Укажите email пользователя!');
                               return;
                             }
+                            const regDateStr = new Date().toLocaleString('ru-RU', {
+                              day: '2-digit', month: '2-digit', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            });
                             const newAcc = {
                               email: newUserForm.email.trim(),
                               name: newUserForm.name.trim() || newUserForm.email.split('@')[0],
@@ -3471,7 +3805,8 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                               tier: newUserForm.tier,
                               twoFactorEnabled: false,
                               isAdmin: newUserForm.isAdmin,
-                              avatar: `https://picsum.photos/seed/${newUserForm.email}/100/100`
+                              avatar: `https://picsum.photos/seed/${newUserForm.email}/100/100`,
+                              createdAt: regDateStr
                             };
 
                             const updated = [newAcc, ...adminUsersList];
@@ -3487,6 +3822,112 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                         </button>
                         <button
                           onClick={() => setIsAddUserModalOpen(false)}
+                          className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs rounded-xl transition-all"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+
+                {/* MODAL: CREATE DEMO PAYOUT REQUEST */}
+                {isDemoPayoutModalOpen && (
+                  <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+                      <div className="flex justify-between items-center border-b border-amber-500/20 pb-3">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-amber-400" />
+                          ⚡ Создание демо-заявки на вывод
+                        </h3>
+                        <button onClick={() => setIsDemoPayoutModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+                      </div>
+
+                      <div className="space-y-3 text-xs">
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Пользователь (из базы или новый Email)</label>
+                          <select
+                            value={demoPayoutForm.userEmail}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const matched = adminUsersList.find(u => u.email === val);
+                              setDemoPayoutForm({
+                                ...demoPayoutForm,
+                                userEmail: val,
+                                wallet: matched?.wallet || demoPayoutForm.wallet
+                              });
+                            }}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="">-- Выберите пользователя или автовыбор --</option>
+                            {adminUsersList.map((u: any) => (
+                              <option key={u.email} value={u.email}>
+                                {u.email} ({u.balance?.toLocaleString() || 0} SAT)
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="email"
+                            placeholder="Или введите произвольный email..."
+                            value={demoPayoutForm.userEmail}
+                            onChange={(e) => setDemoPayoutForm({ ...demoPayoutForm, userEmail: e.target.value })}
+                            className="w-full mt-1 bg-black/50 border border-white/10 rounded-xl px-3 py-1.5 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">Сумма вывода (SAT)</label>
+                            <input
+                              type="number"
+                              value={demoPayoutForm.amountSat}
+                              onChange={(e) => setDemoPayoutForm({ ...demoPayoutForm, amountSat: e.target.value })}
+                              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-slate-400 font-bold block mb-1">Скорость обработки</label>
+                            <select
+                              value={demoPayoutForm.speed}
+                              onChange={(e) => setDemoPayoutForm({ ...demoPayoutForm, speed: e.target.value })}
+                              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none"
+                            >
+                              <option value="Instant (Быстрый)">Instant (Мгновенный)</option>
+                              <option value="Обычный (Slow)">Обычный (Slow - 6-24ч)</option>
+                              <option value="VIP Priority">VIP Priority (Приоритетный)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 font-bold block mb-1">Bitcoin Кошелек получателя</label>
+                          <input
+                            type="text"
+                            placeholder="bc1q..."
+                            value={demoPayoutForm.wallet}
+                            onChange={(e) => setDemoPayoutForm({ ...demoPayoutForm, wallet: e.target.value })}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-amber-300 font-mono focus:outline-none focus:border-amber-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setDemoPayoutForm({ ...demoPayoutForm, wallet: 'bc1q' + Math.random().toString(36).substring(2, 15) + '892301' })}
+                            className="text-[10px] text-amber-400 hover:underline mt-1 inline-block"
+                          >
+                            🎲 Сгенерировать случайный кошелек
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2 border-t border-white/10">
+                        <button
+                          onClick={() => handleCreateDemoPayout()}
+                          className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-bold text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                        >
+                          ⚡ Создать демо-заявку
+                        </button>
+                        <button
+                          onClick={() => setIsDemoPayoutModalOpen(false)}
                           className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs rounded-xl transition-all"
                         >
                           Отмена
