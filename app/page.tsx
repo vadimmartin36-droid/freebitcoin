@@ -285,6 +285,21 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updated));
     setAdminPayoutNotifications(updated);
 
+    if (approvedNotif && approvedNotif.userEmail) {
+      const userHistKey = `freebitco_payout_history_${approvedNotif.userEmail.toLowerCase()}`;
+      const userHist = JSON.parse(localStorage.getItem(userHistKey) || '[]');
+      const finalHist = userHist.map((tx: any) => {
+        if (tx.reqId === notifId || (tx.status === 'В обработке' && (tx.amount + tx.fee === approvedNotif.amountSat || tx.amount === approvedNotif.netAmountSat))) {
+          return { ...tx, status: 'Завершен' as const };
+        }
+        return tx;
+      });
+      localStorage.setItem(userHistKey, JSON.stringify(finalHist));
+      if (currentUser && currentUser.email.toLowerCase() === approvedNotif.userEmail.toLowerCase()) {
+        setPayoutHistory(finalHist);
+      }
+    }
+
     if (approvedNotif?.amountSat) {
       const btcAmount = approvedNotif.amountSat / 100000000;
       const currentExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
@@ -313,6 +328,21 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     });
     localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
     setAdminPayoutNotifications(updatedNotifs);
+
+    if (targetNotif && targetNotif.userEmail) {
+      const userHistKey = `freebitco_payout_history_${targetNotif.userEmail.toLowerCase()}`;
+      const userHist = JSON.parse(localStorage.getItem(userHistKey) || '[]');
+      const finalHist = userHist.map((tx: any) => {
+        if (tx.reqId === notifId || (tx.status === 'В обработке' && (tx.amount + tx.fee === targetNotif.amountSat || tx.amount === targetNotif.netAmountSat))) {
+          return { ...tx, status: 'Отменен' as const };
+        }
+        return tx;
+      });
+      localStorage.setItem(userHistKey, JSON.stringify(finalHist));
+      if (currentUser && currentUser.email.toLowerCase() === targetNotif.userEmail.toLowerCase()) {
+        setPayoutHistory(finalHist);
+      }
+    }
 
     const accounts = JSON.parse(localStorage.getItem('freebitco_accounts') || '[]');
     const updatedAccounts = accounts.map((acc: any) => {
@@ -429,6 +459,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
   const [payoutStatus, setPayoutStatus] = React.useState<{ success?: boolean; message?: string } | null>(null);
   const [payoutHistory, setPayoutHistory] = React.useState<Array<{
     id: string;
+    reqId?: string;
     amount: number;
     fee: number;
     address: string;
@@ -455,6 +486,33 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       txid: '3b2e91a84f010c...81d3'
     }
   ]);
+
+  // Load payout history when currentUser changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && currentUser && currentUser.email) {
+      const histKey = `freebitco_payout_history_${currentUser.email.toLowerCase()}`;
+      const savedHist = localStorage.getItem(histKey);
+      if (savedHist) {
+        try {
+          setPayoutHistory(JSON.parse(savedHist));
+        } catch (e) {}
+      } else {
+        const defaultHist = [
+          {
+            id: 'tx_98124',
+            amount: 45000,
+            fee: 0,
+            address: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
+            date: '2026-07-22 14:30',
+            status: 'Завершен' as const,
+            txid: '7f9a81c028e3b1...4a89'
+          }
+        ];
+        setPayoutHistory(defaultHist);
+        localStorage.setItem(histKey, JSON.stringify(defaultHist));
+      }
+    }
+  }, [currentUser?.email]);
 
   const handleRequestPayout = (e: React.FormEvent) => {
     e.preventDefault();
@@ -488,9 +546,11 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     const now = new Date();
     const timestamp = now.getTime();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const reqId = `req_${timestamp.toString().slice(-6)}`;
 
     const newTx = {
       id: `tx_${timestamp.toString().slice(-5)}`,
+      reqId,
       amount: amountNum - fee,
       fee,
       address: currentUser.wallet || 'bc1qxy2kg3ut7v6396t88372864839201019183',
@@ -499,11 +559,15 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
       txid: `${timestamp.toString(16)}...8f2a`
     };
 
-    setPayoutHistory(prev => [newTx, ...prev]);
+    const updatedHist = [newTx, ...payoutHistory];
+    setPayoutHistory(updatedHist);
+    if (currentUser && currentUser.email) {
+      localStorage.setItem(`freebitco_payout_history_${currentUser.email.toLowerCase()}`, JSON.stringify(updatedHist));
+    }
 
     // Create admin notification item
     const adminNotif = {
-      id: `req_${timestamp.toString().slice(-6)}`,
+      id: reqId,
       userEmail: currentUser.email,
       userName: currentUser.name || 'Пользователь',
       amountSat: amountNum,
