@@ -742,12 +742,12 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         
         // Final Roll selection
         const finalNum = Math.floor(Math.random() * 10001);
-        let reward = 15;
-        if (finalNum === 10000) reward = 1500000;
-        else if (finalNum >= 9998) reward = 150000;
-        else if (finalNum >= 9994) reward = 15000;
-        else if (finalNum >= 9986) reward = 1500;
-        else if (finalNum >= 9886) reward = 150;
+        let reward = 5;
+        if (finalNum === 10000) reward = 100000;
+        else if (finalNum >= 9998) reward = 10000;
+        else if (finalNum >= 9994) reward = 1000;
+        else if (finalNum >= 9986) reward = 100;
+        else if (finalNum >= 9886) reward = 10;
 
         const claims = currentUser.cumulativeClaims + 1;
         let loyalty = currentUser.loyaltyPoints + 2;
@@ -1479,12 +1479,12 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
                     {/* Rows */}
                     {[
-                      { range: '0 - 9885', val: '15 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber <= 9885 },
-                      { range: '9886 - 9985', val: '150 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9886 && rollStatus.finalNumber <= 9985 },
-                      { range: '9986 - 9993', val: '1,500 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9986 && rollStatus.finalNumber <= 9993 },
-                      { range: '9994 - 9997', val: '15,000 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9994 && rollStatus.finalNumber <= 9997 },
-                      { range: '9998 - 9999', val: '150,000 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9998 && rollStatus.finalNumber <= 9999 },
-                      { range: '10000', val: '1,500,000 Satoshis', active: rollStatus.finalNumber === 10000 }
+                      { range: '0 - 9885', val: '5 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber <= 9885 },
+                      { range: '9886 - 9985', val: '10 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9886 && rollStatus.finalNumber <= 9985 },
+                      { range: '9986 - 9993', val: '100 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9986 && rollStatus.finalNumber <= 9993 },
+                      { range: '9994 - 9997', val: '1,000 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9994 && rollStatus.finalNumber <= 9997 },
+                      { range: '9998 - 9999', val: '10,000 Satoshis', active: rollStatus.finalNumber !== null && rollStatus.finalNumber >= 9998 && rollStatus.finalNumber <= 9999 },
+                      { range: '10000', val: '100,000 Satoshis', active: rollStatus.finalNumber === 10000 }
                     ].map((row, idx) => (
                       <div 
                         key={idx} 
