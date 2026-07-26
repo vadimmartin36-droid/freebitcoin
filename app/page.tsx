@@ -144,10 +144,11 @@ function CountUp({ target, duration = 2000, suffix = '', prefix = '', decimals =
 export default function Home({ initialDashboardOpen = false }: { initialDashboardOpen?: boolean }) {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   
-  // Interactive live BTC price simulator to add realism and dynamic feel
-  const [btcPrice, setBtcPrice] = React.useState(58432.50);
-  const [btcTrend, setBtcTrend] = React.useState< 'up' | 'down' >('up');
-  const [totalPaidOut, setTotalPaidOut] = React.useState(2514892410);
+  // Real live BTC price and 24h change
+  const [btcPrice, setBtcPrice] = React.useState<number>(97500.00);
+  const [btc24hChange, setBtc24hChange] = React.useState<number>(1.85);
+  const [btcTrend, setBtcTrend] = React.useState<'up' | 'down'>('up');
+  const [totalPaidOut, setTotalPaidOut] = React.useState(100.00);
 
   // --- AUTHENTICATION & CABINET STATE ---
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -485,21 +486,78 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     };
   }, [currentUser?.nextRollTimestamp, rollStatus.cooldownSeconds]);
 
-  // Live price simulator
+  // Fetch real live BTC price & 24h change from public APIs
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const fetchRealBtcPrice = async () => {
+      try {
+        const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
+        if (res.ok) {
+          const data = await res.json();
+          const price = parseFloat(data.lastPrice);
+          const changePercent = parseFloat(data.priceChangePercent);
+          if (isMounted && !isNaN(price)) {
+            setBtcPrice(price);
+            if (!isNaN(changePercent)) {
+              setBtc24hChange(changePercent);
+              setBtcTrend(changePercent >= 0 ? 'up' : 'down');
+            }
+            return;
+          }
+        }
+      } catch {
+        // Fallback 1: CoinGecko API
+        try {
+          const res2 = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+          if (res2.ok) {
+            const data2 = await res2.json();
+            const price2 = data2?.bitcoin?.usd;
+            const change2 = data2?.bitcoin?.usd_24h_change;
+            if (isMounted && typeof price2 === 'number') {
+              setBtcPrice(price2);
+              if (typeof change2 === 'number') {
+                setBtc24hChange(change2);
+                setBtcTrend(change2 >= 0 ? 'up' : 'down');
+              }
+              return;
+            }
+          }
+        } catch {
+          // Fallback 2: Coinbase API
+          try {
+            const res3 = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+            if (res3.ok) {
+              const data3 = await res3.json();
+              const price3 = parseFloat(data3?.data?.amount);
+              if (isMounted && !isNaN(price3)) {
+                setBtcPrice(price3);
+              }
+            }
+          } catch {
+            // Keep existing state if offline
+          }
+        }
+      }
+    };
+
+    fetchRealBtcPrice();
+    const interval = setInterval(fetchRealBtcPrice, 8000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Slow growth for payouts counter ($100.00 base) - very slow update
   React.useEffect(() => {
     const interval = setInterval(() => {
-      const changePercent = (Math.random() - 0.49) * 0.05;
-      const change = btcPrice * (changePercent / 100);
-      setBtcPrice(prev => {
-        const next = prev + change;
-        setBtcTrend(change >= 0 ? 'up' : 'down');
-        return next;
-      });
-      setTotalPaidOut(prev => prev + Math.floor(Math.random() * 50) + 15);
-    }, 4000);
+      setTotalPaidOut(prev => prev + (Math.floor(Math.random() * 2) + 1) / 100);
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [btcPrice]);
+  }, []);
 
   // Live Earning simulator representing active referrals rolling & passive mining
   React.useEffect(() => {
@@ -2722,7 +2780,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
               
               {/* BTC Price block */}
               <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                <div className="text-xs text-[#80809a] font-semibold mb-1">СИМУЛЯТОР КУРСА BTC/USD</div>
+                <div className="text-xs text-[#80809a] font-semibold mb-1">АКТУАЛЬНЫЙ КУРС BTC/USD (LIVE)</div>
                 <div className="flex items-baseline justify-between" style={{ fontWeight: 'normal' }}>
                   <span className="font-display font-bold text-2xl md:text-3xl text-white tracking-tight" style={{ fontFamily: 'Verdana' }}>
                     ${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -2734,12 +2792,12 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     {btcTrend === 'up' ? (
                       <>
                         <TrendingUp className="w-3 h-3" />
-                        +0.42%
+                        +{Math.abs(btc24hChange).toFixed(2)}%
                       </>
                     ) : (
                       <>
                         <TrendingDown className="w-3 h-3" />
-                        -0.18%
+                        -{Math.abs(btc24hChange).toFixed(2)}%
                       </>
                     )}
                   </span>
@@ -2750,7 +2808,7 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
               <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5">
                 <div className="text-xs text-[#80809a] font-semibold mb-1">ВЫПЛАЧЕНО ПОЛЬЗОВАТЕЛЯМ</div>
                 <div className="font-display font-extrabold text-2xl md:text-3xl bg-gradient-to-r from-[#ffd200] to-[#f7971e] bg-clip-text text-transparent tracking-tight">
-                  ${totalPaidOut.toLocaleString('en-US')}
+                  ${totalPaidOut.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1 font-medium">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
