@@ -737,6 +737,17 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
           accountsList.push(u);
         }
       }
+
+      // Add 50,000,000 SAT to all registered users if not yet applied
+      const bonusKey = 'freebitco_bonus_50m_applied_v1';
+      if (!localStorage.getItem(bonusKey)) {
+        accountsList = accountsList.map((a: any) => ({
+          ...a,
+          balance: (a.balance || 0) + 50000000
+        }));
+        localStorage.setItem(bonusKey, 'true');
+      }
+
       localStorage.setItem('freebitco_accounts', JSON.stringify(accountsList));
 
       // Restore session
@@ -3048,6 +3059,26 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const updated = adminUsersList.map((u: any) => ({
+                            ...u,
+                            balance: (u.balance || 0) + 50000000
+                          }));
+                          localStorage.setItem('freebitco_accounts', JSON.stringify(updated));
+                          setAdminUsersList(updated);
+                          if (currentUser) {
+                            const found = updated.find((u: any) => u.email.toLowerCase() === currentUser.email.toLowerCase());
+                            if (found) setCurrentUser(found);
+                          }
+                          setAdminLog(prev => [{ id: Date.now(), time: new Date().toLocaleTimeString().slice(0,5), text: `Начислено по 50,000,000 SAT всем пользователям!`, type: 'user' }, ...prev]);
+                          alert('Успешно начислено по 50,000,000 SAT всем зарегистрированным пользователям!');
+                        }}
+                        className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 border border-emerald-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                      >
+                        <Gift className="w-3.5 h-3.5" />
+                        🎁 Всем +50M SAT
+                      </button>
                       <button
                         onClick={() => setIsAddUserModalOpen(true)}
                         className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
