@@ -153,7 +153,7 @@ function calculateCurrentTotalPaidOut(): number {
   return BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra);
 }
 
-export default function Home({ initialDashboardOpen = false }: { initialDashboardOpen?: boolean }) {
+export default function Home() {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   
   // Real live BTC price and 24h change
@@ -853,13 +853,9 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         if (user) {
           setTimeout(() => {
             const now = Date.now();
-            if (user.lastMiningTimestamp) {
-              const diffMs = now - user.lastMiningTimestamp;
-              if (diffMs > 15000) {
-                setIdleModalOpen(true);
-              }
-            } else {
+            if (!sessionStorage.getItem('hasShownIdleModal')) {
               setIdleModalOpen(true);
+              sessionStorage.setItem('hasShownIdleModal', 'true');
             }
             const isUserAdmin = user.isAdmin ?? (
               user.email.toLowerCase() === 'vadimmartin@ukr.net' ||
@@ -870,22 +866,22 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
             setCurrentUser(finalUser);
             syncUserToStorage(finalUser);
             setIsLoggedIn(true);
-            if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
+            if (window.location.pathname === '/dashboard') {
               setIsDashboardOpen(true);
             }
           }, 0);
-        } else if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
+        } else if (window.location.pathname === '/dashboard') {
           setTimeout(() => {
             setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
           }, 0);
         }
-      } else if (window.location.pathname === '/dashboard' || initialDashboardOpen) {
+      } else if (window.location.pathname === '/dashboard') {
         setTimeout(() => {
           setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
         }, 0);
       }
     }
-  }, [initialDashboardOpen]);
+  }, []);
 
   // Synchronize browser URL bar (/dashboard vs /)
   React.useEffect(() => {
@@ -1076,10 +1072,6 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
         hiddenTime = Date.now();
       } else {
         if (hiddenTime > 0) {
-          const awayTimeMs = Date.now() - hiddenTime;
-          if (awayTimeMs > 15000 && isLoggedIn && isDashboardOpen) {
-            setIdleModalOpen(true);
-          }
           hiddenTime = 0;
         }
       }
@@ -1124,13 +1116,6 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
 
     if (user) {
       const now = Date.now();
-      if (user.lastMiningTimestamp) {
-        if (now - user.lastMiningTimestamp > 15000) {
-          setIdleModalOpen(true);
-        }
-      } else {
-        setIdleModalOpen(true);
-      }
       const isUserAdmin = user.isAdmin ?? (
         user.email.toLowerCase() === 'vadimmartin@ukr.net' ||
         user.email === 'demo@freebitco.io' ||
@@ -1153,13 +1138,6 @@ export default function Home({ initialDashboardOpen = false }: { initialDashboar
     const demoUser = accounts.find((a: any) => a.email === 'demo@freebitco.io');
     if (demoUser) {
       const now = Date.now();
-      if (demoUser.lastMiningTimestamp) {
-        if (now - demoUser.lastMiningTimestamp > 15000) {
-          setIdleModalOpen(true);
-        }
-      } else {
-        setIdleModalOpen(true);
-      }
       const updatedUser = { ...demoUser, lastMiningTimestamp: now };
       localStorage.setItem('freebitco_session', updatedUser.email);
       setCurrentUser(updatedUser);
