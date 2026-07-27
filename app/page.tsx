@@ -866,16 +866,33 @@ export default function Home() {
             setCurrentUser(finalUser);
             syncUserToStorage(finalUser);
             setIsLoggedIn(true);
-            if (window.location.pathname === '/dashboard') {
+            const currentPath = window.location.pathname;
+            const isDashboardRoute = currentPath === '/dashboard' || currentPath === '/kran-free-btc' || currentPath === '/igra-hi-lo-multiplier' || currentPath === '/partnerskij-centr' || currentPath === '/kriptokalkulyator' || currentPath === '/vyplaty-i-vyvod-sredstv' || currentPath === '/nastrojki-i-bezopasnost' || currentPath === '/panel-administratora';
+            if (isDashboardRoute) {
               setIsDashboardOpen(true);
+              if (currentPath === '/kran-free-btc') {
+                setActiveDashboardTab('faucet');
+              } else if (currentPath === '/igra-hi-lo-multiplier') {
+                setActiveDashboardTab('multiply');
+              } else if (currentPath === '/partnerskij-centr') {
+                setActiveDashboardTab('referrals');
+              } else if (currentPath === '/kriptokalkulyator') {
+                setActiveDashboardTab('calculator');
+              } else if (currentPath === '/vyplaty-i-vyvod-sredstv') {
+                setActiveDashboardTab('payouts');
+              } else if (currentPath === '/nastrojki-i-bezopasnost') {
+                setActiveDashboardTab('settings');
+              } else if (currentPath === '/panel-administratora') {
+                setActiveDashboardTab('admin');
+              }
             }
           }, 0);
-        } else if (window.location.pathname === '/dashboard') {
+        } else if (['/dashboard', '/kran-free-btc', '/igra-hi-lo-multiplier', '/partnerskij-centr', '/kriptokalkulyator', '/vyplaty-i-vyvod-sredstv', '/nastrojki-i-bezopasnost', '/panel-administratora'].includes(window.location.pathname)) {
           setTimeout(() => {
             setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
           }, 0);
         }
-      } else if (window.location.pathname === '/dashboard') {
+      } else if (['/dashboard', '/kran-free-btc', '/igra-hi-lo-multiplier', '/partnerskij-centr', '/kriptokalkulyator', '/vyplaty-i-vyvod-sredstv', '/nastrojki-i-bezopasnost', '/panel-administratora'].includes(window.location.pathname)) {
         setTimeout(() => {
           setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
         }, 0);
@@ -883,29 +900,62 @@ export default function Home() {
     }
   }, []);
 
-  // Synchronize browser URL bar (/dashboard vs /)
+  // Synchronize browser URL bar (/panel-administratora vs /nastrojki-i-bezopasnost vs /vyplaty-i-vyvod-sredstv vs /kriptokalkulyator vs /partnerskij-centr vs /igra-hi-lo-multiplier vs /kran-free-btc vs /dashboard vs /)
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
     if (isDashboardOpen && isLoggedIn && currentUser) {
-      if (window.location.pathname !== '/dashboard') {
-        window.history.pushState({ dashboard: true }, '', '/dashboard');
+      let targetPath = '/dashboard';
+      if (activeDashboardTab === 'faucet') {
+        targetPath = '/kran-free-btc';
+      } else if (activeDashboardTab === 'multiply') {
+        targetPath = '/igra-hi-lo-multiplier';
+      } else if (activeDashboardTab === 'referrals') {
+        targetPath = '/partnerskij-centr';
+      } else if (activeDashboardTab === 'calculator') {
+        targetPath = '/kriptokalkulyator';
+      } else if (activeDashboardTab === 'payouts') {
+        targetPath = '/vyplaty-i-vyvod-sredstv';
+      } else if (activeDashboardTab === 'settings') {
+        targetPath = '/nastrojki-i-bezopasnost';
+      } else if (activeDashboardTab === 'admin') {
+        targetPath = '/panel-administratora';
+      }
+
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ dashboard: true, tab: activeDashboardTab }, '', targetPath);
       }
     } else if (!isDashboardOpen) {
-      if (window.location.pathname === '/dashboard') {
+      if (['/dashboard', '/kran-free-btc', '/igra-hi-lo-multiplier', '/partnerskij-centr', '/kriptokalkulyator', '/vyplaty-i-vyvod-sredstv', '/nastrojki-i-bezopasnost', '/panel-administratora'].includes(window.location.pathname)) {
         window.history.pushState({ dashboard: false }, '', '/');
       }
     }
-  }, [isDashboardOpen, isLoggedIn, currentUser]);
+  }, [isDashboardOpen, isLoggedIn, currentUser, activeDashboardTab]);
 
   // Listen to browser Back / Forward buttons
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handlePopState = () => {
-      if (window.location.pathname === '/dashboard') {
+      const currentPath = window.location.pathname;
+      if (['/dashboard', '/kran-free-btc', '/igra-hi-lo-multiplier', '/partnerskij-centr', '/kriptokalkulyator', '/vyplaty-i-vyvod-sredstv', '/nastrojki-i-bezopasnost', '/panel-administratora'].includes(currentPath)) {
         if (isLoggedIn) {
           setIsDashboardOpen(true);
+          if (currentPath === '/kran-free-btc') {
+            setActiveDashboardTab('faucet');
+          } else if (currentPath === '/igra-hi-lo-multiplier') {
+            setActiveDashboardTab('multiply');
+          } else if (currentPath === '/partnerskij-centr') {
+            setActiveDashboardTab('referrals');
+          } else if (currentPath === '/kriptokalkulyator') {
+            setActiveDashboardTab('calculator');
+          } else if (currentPath === '/vyplaty-i-vyvod-sredstv') {
+            setActiveDashboardTab('payouts');
+          } else if (currentPath === '/nastrojki-i-bezopasnost') {
+            setActiveDashboardTab('settings');
+          } else if (currentPath === '/panel-administratora') {
+            setActiveDashboardTab('admin');
+          }
         } else {
           setAuthModal(prev => ({ ...prev, isOpen: true, mode: 'login' }));
         }
