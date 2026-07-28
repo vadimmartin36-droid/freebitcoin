@@ -1609,7 +1609,7 @@ export default function Home() {
         </div>
 
         {/* 1. SIDEBAR NAVIGATION (Desktop) */}
-        <aside className="w-full md:w-80 shrink-0 bg-[#070816]/95 border-b md:border-b-0 md:border-r border-white/5 relative z-20 flex flex-col justify-between p-6">
+        <aside className="hidden md:flex md:w-80 shrink-0 bg-[#070816]/95 border-r border-white/5 relative z-20 flex-col justify-between p-6">
           <div>
             {/* Header / Brand */}
             <div className="flex items-center gap-3.5 pb-6 border-b border-white/5 mb-6">
@@ -1802,9 +1802,18 @@ export default function Home() {
         {/* 2. MAIN CABINET AREA */}
         <main className="flex-1 overflow-y-auto relative z-10 flex flex-col min-h-screen">
           {/* Dashboard Sticky Top Bar */}
-          <header className="sticky top-0 z-20 bg-[#070816]/70 backdrop-blur-md border-b border-white/5 px-6 md:px-12 py-4 flex items-center justify-between">
+          <header className="sticky top-0 z-30 bg-[#070816]/90 backdrop-blur-md border-b border-white/5 px-4 md:px-12 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-sm font-bold text-white capitalize md:text-lg" style={{ fontFamily: 'Georgia' }}>
+              {/* Mobile Hamburger Toggle */}
+              <button
+                onClick={() => setIsMobileDashboardMenuOpen(!isMobileDashboardMenuOpen)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 md:hidden transition-all shrink-0"
+                aria-label="Toggle Dashboard Menu"
+              >
+                {isMobileDashboardMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
+              <h1 className="text-xs sm:text-sm font-bold text-white capitalize md:text-lg truncate max-w-[180px] sm:max-w-none" style={{ fontFamily: 'Georgia' }}>
                 {activeDashboardTab === 'overview' && '📊 Моя аналитика'}
                 {activeDashboardTab === 'faucet' && '🎲 Кран FREE BTC'}
                 {activeDashboardTab === 'multiply' && '📈 Игра HI-LO Multiplier'}
@@ -1817,7 +1826,7 @@ export default function Home() {
             </div>
 
             {/* Quick stats on Header */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               {/* BTC Ticker widget */}
               <div className="hidden lg:flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs" style={{ fontFamily: 'Verdana' }}>
                 <span className="font-bold text-slate-400">BTC/USD:</span>
@@ -1826,15 +1835,157 @@ export default function Home() {
                   {btcTrend === 'up' ? '▲' : '▼'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 bg-[#ffd200]/10 border border-[#ffd200]/20 rounded-xl px-3 py-1 text-xs text-[#ffd200] font-bold">
+              <div className="flex items-center gap-1.5 md:gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-2.5 md:px-3 py-1 text-[11px] md:text-xs text-orange-400 font-bold font-mono">
+                <span>₿ {(currentUser.balance / 100000000).toFixed(6)}</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 bg-[#ffd200]/10 border border-[#ffd200]/20 rounded-xl px-3 py-1 text-xs text-[#ffd200] font-bold">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span style={{ fontFamily: 'Verdana' }}>{currentUser.loyaltyPoints} RP</span>
               </div>
             </div>
           </header>
 
+          {/* MOBILE DASHBOARD MENU OVERLAY SHEET */}
+          <AnimatePresence>
+            {isMobileDashboardMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                className="md:hidden sticky top-[57px] z-20 w-full bg-[#070816]/98 border-b border-white/10 backdrop-blur-xl overflow-hidden p-5 space-y-5"
+                style={{ fontFamily: 'Georgia' }}
+              >
+                {/* Profile & Balance card */}
+                <div className="flex items-center justify-between p-3.5 bg-white/[0.03] border border-white/5 rounded-2xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={currentUser.avatar} alt="Avatar" className="w-9 h-9 rounded-xl border border-white/10 object-cover shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{currentUser.name}</div>
+                      <div className="text-[10px] text-amber-400 font-mono">{(currentUser.balance / 100000000).toFixed(8)} BTC</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-md border border-orange-500/20 shrink-0">
+                    {currentUser.tier}
+                  </span>
+                </div>
+
+                {/* Navigation Menu */}
+                <nav className="grid grid-cols-1 gap-1.5 text-xs">
+                  <button
+                    onClick={() => { setIsBotRunning(false); setActiveDashboardTab('overview'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'overview' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <Activity className="w-4 h-4 text-orange-400" />
+                    <span>Панель управления</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsBotRunning(false); setActiveDashboardTab('faucet'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'faucet' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Coins className="w-4 h-4 text-orange-400" />
+                      <span>Кран FREE BTC</span>
+                    </span>
+                    {rollStatus.cooldownSeconds === 0 && (
+                      <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setActiveDashboardTab('multiply'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'multiply' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <TrendingUp className="w-4 h-4 text-cyan-400" />
+                    <span>Умножитель MULTIPLY</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsBotRunning(false); setActiveDashboardTab('referrals'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'referrals' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <Users className="w-4 h-4 text-[#ffd200]" />
+                    <span>Партнерский центр</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsBotRunning(false); setActiveDashboardTab('calculator'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'calculator' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <Calculator className="w-4 h-4 text-emerald-400" />
+                    <span>Криптокалькулятор</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsBotRunning(false); setActiveDashboardTab('payouts'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'payouts' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <Wallet className="w-4 h-4 text-amber-400" />
+                    <span>Выплаты и вывод</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsBotRunning(false); setActiveDashboardTab('settings'); setIsMobileDashboardMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeDashboardTab === 'settings' ? "bg-orange-500/20 text-orange-300 border border-orange-500/40" : "text-slate-300 bg-white/[0.02]"
+                    )}
+                  >
+                    <Settings className="w-4 h-4 text-purple-400" />
+                    <span>Настройки и безопасность</span>
+                  </button>
+
+                  {(currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email?.toLowerCase() === 'vadimmartin@ukr.net' || currentUser?.email === 'demo@freebitco.io') && (
+                    <button
+                      onClick={() => { setIsBotRunning(false); setActiveDashboardTab('admin'); setIsMobileDashboardMenuOpen(false); }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border mt-1",
+                        activeDashboardTab === 'admin' ? "bg-amber-500/20 text-amber-300 border-amber-500/50" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      )}
+                    >
+                      <span className="flex items-center gap-3">
+                        <ShieldCheck className="w-4 h-4 text-amber-400" />
+                        <span>Панель администратора</span>
+                      </span>
+                      <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold uppercase">Admin</span>
+                    </button>
+                  )}
+                </nav>
+
+                {/* Footer buttons */}
+                <div className="pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => { setIsMobileDashboardMenuOpen(false); setIsDashboardOpen(false); }}
+                    className="py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs text-white font-bold flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Лендинг
+                  </button>
+                  <button
+                    onClick={() => { setIsMobileDashboardMenuOpen(false); handleLogout(); }}
+                    className="py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-bold flex items-center justify-center gap-1.5"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Выйти
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Dynamic Content Panel */}
-          <div className="p-6 md:p-12 max-w-7xl w-full mx-auto space-y-8 flex-1">
+          <div className="p-4 md:p-12 max-w-7xl w-full mx-auto space-y-6 md:space-y-8 flex-1">
             
             {/* TAB 1: OVERVIEW */}
             {activeDashboardTab === 'overview' && (
@@ -3426,7 +3577,7 @@ export default function Home() {
                 {/* MODAL: EDIT USER BALANCE / DETAILS */}
                 {editingUser && (
                   <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
                       <div className="flex justify-between items-center border-b border-white/10 pb-3">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <Settings className="w-4 h-4 text-amber-400" />
@@ -3572,7 +3723,7 @@ export default function Home() {
                 {/* MODAL: ADD NEW USER */}
                 {isAddUserModalOpen && (
                   <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
                       <div className="flex justify-between items-center border-b border-white/10 pb-3">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <UserPlus className="w-4 h-4 text-amber-400" />
@@ -4716,7 +4867,7 @@ export default function Home() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="relative w-full max-w-md bg-gradient-to-b from-[#0e0f26] via-[#090b1c] to-[#050612] border border-orange-500/30 rounded-3xl p-7 md:p-9 shadow-[0_25px_70px_rgba(247,151,30,0.2)] overflow-hidden backdrop-blur-2xl"
+              className="relative w-full max-w-md bg-gradient-to-b from-[#0e0f26] via-[#090b1c] to-[#050612] border border-orange-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(247,151,30,0.2)] overflow-y-auto max-h-[92vh] backdrop-blur-2xl"
               style={{ fontFamily: 'Georgia' }}
             >
               {/* Top ambient orange & purple glow orbs */}
