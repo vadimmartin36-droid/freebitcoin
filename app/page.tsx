@@ -2175,12 +2175,12 @@ export default function Home() {
                           onClick={triggerFreeRoll}
                           disabled={rollStatus.isRolling}
                           className={cn(
-                            "px-10 py-5 bg-gradient-to-r rounded-2xl text-slate-900 font-extrabold text-lg shadow-xl tracking-wide transition-all scale-100 active:scale-95 duration-200",
+                            "px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-3.5 bg-gradient-to-r rounded-xl sm:rounded-2xl text-slate-900 font-extrabold text-xs sm:text-sm md:text-base shadow-xl tracking-wide transition-all scale-100 active:scale-95 duration-200",
                             rollStatus.isRolling ? "from-slate-700 to-slate-800 text-slate-400 cursor-not-allowed" : theme.accentButton
                           )}
                           style={{ fontFamily: 'Georgia' }}
                         >
-                          {rollStatus.isRolling ? 'Генерация счастливого числа...' : '🎲 КЛИКНУТЬ ROLL'}
+                          {rollStatus.isRolling ? 'Генерация...' : '🎲 КЛИКНУТЬ ROLL'}
                         </button>
                       )}
                     </div>
@@ -2281,38 +2281,38 @@ export default function Home() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-[11px] text-slate-400 font-bold mb-1.5 uppercase">Размер ставки (SAT)</label>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <input 
                             type="number" 
                             value={multiplyBet}
                             onChange={(e) => setMultiplyBet(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-400/50"
+                            className="flex-1 min-w-0 bg-black/40 border border-white/10 rounded-xl px-2.5 sm:px-4 py-2 sm:py-3 text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-400/50"
                             disabled={isBotRunning}
                           />
                           <button 
                             onClick={() => setMultiplyBet(Math.max(1, Math.floor(multiplyBet / 2)))}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-xs font-bold text-slate-300"
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-1.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-300 shrink-0"
                             disabled={isBotRunning}
                           >
                             /2
                           </button>
                           <button 
                             onClick={() => setMultiplyBet(multiplyBet * 2)}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-xs font-bold text-slate-300"
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-1.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-300 shrink-0"
                             disabled={isBotRunning}
                           >
                             2x
                           </button>
                           <button 
                             onClick={() => setMultiplyBet(1)}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-[10px] font-bold text-slate-300"
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-1.5 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-bold text-slate-300 shrink-0"
                             disabled={isBotRunning}
                           >
                             MIN
                           </button>
                           <button 
                             onClick={() => setMultiplyBet(currentUser.balance)}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 text-[10px] font-bold text-slate-300"
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-1.5 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-bold text-slate-300 shrink-0"
                             disabled={isBotRunning}
                           >
                             MAX
@@ -2321,30 +2321,30 @@ export default function Home() {
                       </div>
 
                       {/* Manual betting buttons */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4">
                         <button
                           onClick={() => playHiLo(true)}
                           disabled={isBotRunning}
                           className={cn(
-                            "py-4 bg-[#10b981] hover:bg-[#059669] text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1",
+                            "py-2.5 sm:py-3.5 md:py-4 bg-[#10b981] hover:bg-[#059669] text-white font-extrabold rounded-xl sm:rounded-2xl text-[10px] sm:text-xs uppercase tracking-wider sm:tracking-widest shadow-lg active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-0.5 sm:gap-1",
                             isBotRunning && "opacity-50 cursor-not-allowed"
                           )}
                           style={{ fontFamily: 'Georgia' }}
                         >
                           <span>BET HIGH 📈</span>
-                          <span className="text-[9px] font-normal tracking-normal lowercase">(число &gt; 5250)</span>
+                          <span className="text-[8px] sm:text-[9px] font-normal tracking-normal lowercase">(число &gt; 5250)</span>
                         </button>
                         <button
                           onClick={() => playHiLo(false)}
                           disabled={isBotRunning}
                           className={cn(
-                            "py-4 bg-[#ef4444] hover:bg-[#dc2626] text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1",
+                            "py-2.5 sm:py-3.5 md:py-4 bg-[#ef4444] hover:bg-[#dc2626] text-white font-extrabold rounded-xl sm:rounded-2xl text-[10px] sm:text-xs uppercase tracking-wider sm:tracking-widest shadow-lg active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-0.5 sm:gap-1",
                             isBotRunning && "opacity-50 cursor-not-allowed"
                           )}
                           style={{ fontFamily: 'Georgia' }}
                         >
                           <span>BET LOW 📉</span>
-                          <span className="text-[9px] font-normal tracking-normal lowercase">(число &lt; 4750)</span>
+                          <span className="text-[8px] sm:text-[9px] font-normal tracking-normal lowercase">(число &lt; 4750)</span>
                         </button>
                       </div>
                     </div>
@@ -2441,7 +2441,7 @@ export default function Home() {
                       <button
                         onClick={toggleBot}
                         className={cn(
-                          "w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl transition-all duration-150 flex items-center justify-center gap-2",
+                          "w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-xl transition-all duration-150 flex items-center justify-center gap-1.5 sm:gap-2",
                           isBotRunning ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-[#00d4ff] text-slate-900 hover:bg-[#00b5da]"
                         )}
                         style={{ fontFamily: 'Georgia' }}
@@ -2522,9 +2522,9 @@ export default function Home() {
                               navigator.clipboard.writeText(dynamicRefLink);
                               alert('Уникальная партнерская ссылка успешно скопирована!');
                             }}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 text-xs font-bold text-white inline-flex items-center gap-1.5 transition-colors"
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-2.5 sm:px-4 py-2 text-[10px] sm:text-xs font-bold text-white inline-flex items-center justify-center gap-1.5 transition-colors shrink-0"
                           >
-                            <Copy className="w-4 h-4" /> Копировать ссылку
+                            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Копировать
                           </button>
                         </div>
                       </div>
@@ -4053,75 +4053,75 @@ export default function Home() {
       </div>
 
       {/* NAVIGATION / HEADER */}
-      <header className="sticky top-0 z-40 bg-[#03040b]/80 backdrop-blur-md border-b border-white/10 py-4 px-4 md:px-12 flex items-center justify-between transition-all">
-        <div className="flex items-center gap-3.5 cursor-pointer group">
-          {/* Stunning Logo Icon */}
-          <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-amber-400 to-yellow-300 rounded-2xl blur-[8px] opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative w-12 h-12 bg-gradient-to-tr from-[#12132b] to-[#090a18] border border-orange-500/50 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+      <header className="sticky top-0 z-40 bg-[#03040b]/80 backdrop-blur-md border-b border-white/10 py-3 md:py-4 px-2.5 sm:px-6 md:px-12 flex items-center justify-between gap-2 transition-all">
+        <div className="flex items-center gap-2 sm:gap-3.5 cursor-pointer group shrink-0">
+          {/* Logo Icon */}
+          <div className="relative w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-amber-400 to-yellow-300 rounded-xl sm:rounded-2xl blur-[6px] opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-tr from-[#12132b] to-[#090a18] border border-orange-500/50 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 via-amber-500/10 to-transparent" />
-              <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-amber-400 via-yellow-200 to-orange-400 drop-shadow-[0_0_10px_rgba(247,151,30,0.7)]">
+              <span className="font-black text-lg sm:text-2xl text-transparent bg-clip-text bg-gradient-to-tr from-amber-400 via-yellow-200 to-orange-400 drop-shadow-[0_0_10px_rgba(247,151,30,0.7)]">
                 ₿
               </span>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-orange-400 to-amber-300 rounded-full border-2 border-slate-950 flex items-center justify-center text-[8px] font-black text-slate-950 shadow-sm">
+              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-gradient-to-r from-orange-400 to-amber-300 rounded-full border-2 border-slate-950 flex items-center justify-center text-[7px] sm:text-[8px] font-black text-slate-950 shadow-sm">
                 ✦
               </div>
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-['Poppins'] font-black text-2xl tracking-tight text-white flex items-center gap-1">
+            <span className="font-['Poppins'] font-black text-lg sm:text-2xl tracking-tight text-white flex items-center gap-0.5 sm:gap-1">
               <span>Bit</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400">Bonus</span>
-              <span className="text-white px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 rounded-lg text-xs font-bold ml-1 text-orange-300">Hub</span>
+              <span className="text-white px-1.5 py-0.5 bg-orange-500/20 border border-orange-500/40 rounded-md sm:rounded-lg text-[9px] sm:text-xs font-bold ml-0.5 text-orange-300">Hub</span>
             </span>
           </div>
         </div>
 
         {/* Desktop Links */}
-        <nav className="hidden md:flex items-center justify-between text-sm font-medium text-slate-400 w-[450px] h-[30px]" style={{ fontSize: '14px', lineHeight: '16px', fontFamily: 'Georgia' }}>
-          <a href="#benefits" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>Преимущества</a>
-          <a href="#steps" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>Как начать</a>
-          <a href="#testimonials" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px', fontWeight: 'normal', textDecorationLine: 'none' }}>Отзывы</a>
-          <a href="#stats" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>Статистика</a>
-          <a href="#faq" className="hover:text-white transition-colors text-sm" style={{ fontFamily: 'Georgia', fontSize: '16px' }}>FAQ</a>
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-7 text-xs xl:text-sm font-medium text-slate-400" style={{ fontFamily: 'Georgia' }}>
+          <a href="#benefits" className="hover:text-white transition-colors">Преимущества</a>
+          <a href="#steps" className="hover:text-white transition-colors">Как начать</a>
+          <a href="#testimonials" className="hover:text-white transition-colors">Отзывы</a>
+          <a href="#stats" className="hover:text-white transition-colors">Статистика</a>
+          <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
         </nav>
 
-        {/* Header Action Button & Mobile Hamburguer */}
-        <div className="flex items-center gap-2 md:gap-4">
+        {/* Header Action Buttons & Mobile Hamburger */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-4 shrink-0">
           {isLoggedIn && currentUser ? (
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
               {/* Quick balance display */}
               <div className="hidden sm:flex flex-col text-right">
-                <span className="text-[10px] text-slate-400 font-bold tracking-wider" style={{ fontFamily: 'Georgia' }}>БАЛАНС</span>
-                <span className="text-xs font-mono font-bold text-orange-400" style={{ fontFamily: 'Verdana', textAlign: 'right', fontSize: '12px', lineHeight: '16px' }}>{(currentUser.balance / 100000000).toFixed(8)} BTC</span>
+                <span className="text-[9px] text-slate-400 font-bold tracking-wider" style={{ fontFamily: 'Georgia' }}>БАЛАНС</span>
+                <span className="text-[11px] font-mono font-bold text-orange-400" style={{ fontFamily: 'Verdana' }}>{(currentUser.balance / 100000000).toFixed(8)} BTC</span>
               </div>
               <button
                 onClick={() => setIsDashboardOpen(true)}
-                className="relative inline-flex items-center justify-center px-3 md:px-4 py-2 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-[#ffd200] font-bold text-[10px] md:text-xs transition-all duration-300"
+                className="relative inline-flex items-center justify-center px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-[#ffd200] font-bold text-[10px] sm:text-xs transition-all duration-300 whitespace-nowrap"
                 style={{ fontFamily: 'Georgia' }}
               >
                 Кабинет
               </button>
               <button
                 onClick={handleLogout}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all shrink-0"
+                className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all shrink-0"
                 title="Выйти"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 md:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2.5">
               <button
                 onClick={() => handleOpenAuth('login')}
-                className="text-[11px] md:text-xs font-bold text-slate-300 hover:text-white px-2 md:px-3 py-1.5 transition-colors"
+                className="text-[10px] sm:text-xs font-bold text-slate-300 hover:text-white px-2 sm:px-3 py-1.5 transition-colors whitespace-nowrap"
                 style={{ fontFamily: 'Georgia' }}
               >
                 Войти
               </button>
               <button 
                 onClick={() => handleOpenAuth('register')}
-                className="relative inline-flex items-center justify-center px-3 md:px-4.5 py-1.5 md:py-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-bold text-[11px] md:text-xs shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
+                className="relative inline-flex items-center justify-center px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-400 text-slate-950 font-bold text-[10px] sm:text-xs shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap"
                 style={{ fontFamily: 'Georgia' }}
               >
                 Регистрация
@@ -4132,7 +4132,7 @@ export default function Home() {
           {/* Hamburger button for mobile menu */}
           <button
             onClick={() => setIsMobileLandingMenuOpen(!isMobileLandingMenuOpen)}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white md:hidden transition-all shrink-0"
+            className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white lg:hidden transition-all shrink-0"
             aria-label="Toggle Menu"
           >
             {isMobileLandingMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -4301,11 +4301,11 @@ export default function Home() {
                 href={REF_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-2xl text-slate-900 font-bold text-xl shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 text-center"
-                style={{ fontFamily: 'Georgia', paddingTop: '10px', paddingBottom: '10px', paddingLeft: '35px', paddingRight: '35px' }}
+                className="relative w-full sm:w-auto inline-flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-xl sm:rounded-2xl text-slate-900 font-bold text-sm sm:text-base md:text-lg shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 text-center px-4 sm:px-6 md:px-8 py-2.5 sm:py-3.5"
+                style={{ fontFamily: 'Georgia' }}
               >
                 🚀 Получить бонус сейчас
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1.5 transition-transform" />
               </a>
             </div>
           </motion.div>
@@ -4535,11 +4535,10 @@ export default function Home() {
                 href={REF_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-xl text-slate-900 font-bold text-base tracking-wider shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
-                style={{ paddingTop: '15px', paddingBottom: '14px', paddingLeft: '35px', paddingRight: '35px' }}
+                className="relative inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-xl text-slate-900 font-bold text-xs sm:text-sm md:text-base tracking-wider shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3"
               >
                 Начать зарабатывать сейчас
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
               </a>
             </div>
           </motion.div>
@@ -4758,11 +4757,11 @@ export default function Home() {
                 href={REF_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-2xl text-slate-900 font-bold text-lg shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                className="relative w-full sm:w-auto inline-flex items-center justify-center gap-2 sm:gap-3 px-5 sm:px-8 py-2.5 sm:py-3.5 bg-gradient-to-r from-orange-500 to-yellow-400 rounded-xl sm:rounded-2xl text-slate-900 font-bold text-xs sm:text-sm md:text-base shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
                 style={{ fontFamily: 'Georgia' }}
               >
                 🚀 Присоединиться к freebitco.in
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1.5 transition-transform" />
               </a>
             </div>
 
@@ -4984,13 +4983,13 @@ export default function Home() {
                     {/* Login Action Button */}
                     <button
                       type="submit"
-                      className="w-full py-4 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                      className="w-full py-3 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
                     >
                       Войти в аккаунт
                     </button>
 
                     {/* OR divider */}
-                    <div className="relative flex py-2 items-center">
+                    <div className="relative flex py-1.5 items-center">
                       <div className="flex-grow border-t border-white/10"></div>
                       <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-bold uppercase tracking-widest">ИЛИ</span>
                       <div className="flex-grow border-t border-white/10"></div>
@@ -5000,7 +4999,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleDemoLogin}
-                      className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 shadow-md"
+                      className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 shadow-md"
                     >
                       <Sparkles className="w-4 h-4 text-[#ffd200]" />
                       Вход через Демо-профиль
@@ -5110,7 +5109,7 @@ export default function Home() {
                     {/* Register Action Button */}
                     <button
                       type="submit"
-                      className="w-full py-4 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                      className="w-full py-3 mt-2 bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl shadow-[0_4px_25px_rgba(247,151,30,0.35)] hover:shadow-[0_6px_30px_rgba(247,151,30,0.5)] hover:scale-[1.01] active:scale-95 transition-all duration-200"
                     >
                       Создать кабинет
                     </button>
