@@ -153,6 +153,26 @@ function calculateCurrentTotalPaidOut(): number {
   return BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra);
 }
 
+const playAdminNotificationSound = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
+};
+
 export default function Home() {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   
@@ -210,6 +230,17 @@ export default function Home() {
   });
 
   const [isRefreshingAdmin, setIsRefreshingAdmin] = React.useState<boolean>(false);
+  const [isAdminNotifDropdownOpen, setIsAdminNotifDropdownOpen] = React.useState<boolean>(false);
+  const [adminPayoutToast, setAdminPayoutToast] = React.useState<{
+    id: string;
+    userEmail: string;
+    userName: string;
+    amountSat: number;
+    wallet: string;
+    speed: string;
+    date: string;
+  } | null>(null);
+
   const [adminLog, setAdminLog] = React.useState<Array<{ id: number; time: string; text: string; type: 'info' | 'user' | 'system' }>>([
     { id: 1, time: '18:42', text: 'Админ-панель инициализирована. Система работает штатно.', type: 'system' },
     { id: 2, time: '18:40', text: 'Резервная копия структуры пользователей обновлена в LocalStorage.', type: 'info' }
@@ -278,11 +309,31 @@ export default function Home() {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
         broadcastChannel = new BroadcastChannel('freebitco_admin_sync_channel');
-        broadcastChannel.onmessage = () => {
+        broadcastChannel.onmessage = (event: MessageEvent) => {
           refreshAdminUsersList();
           refreshAdminPayoutNotifications();
           const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
           setTotalPaidOut(BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra));
+
+          if (event.data?.type === 'NEW_PAYOUT_REQUEST') {
+            playAdminNotificationSound();
+            const stored = localStorage.getItem('freebitco_admin_payout_notifications');
+            if (stored) {
+              const notifs = JSON.parse(stored);
+              if (notifs.length > 0) {
+                const latest = notifs[0];
+                setAdminPayoutToast({
+                  id: latest.id,
+                  userEmail: latest.userEmail,
+                  userName: latest.userName,
+                  amountSat: latest.amountSat,
+                  wallet: latest.wallet,
+                  speed: latest.speed,
+                  date: latest.date
+                });
+              }
+            }
+          }
         };
       } catch (e) {}
     }
@@ -723,6 +774,18 @@ export default function Home() {
       localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
       setAdminPayoutNotifications(updatedNotifs);
       notifyAdminSyncChannel('NEW_PAYOUT_REQUEST');
+
+      // Trigger real-time sound and toast alert
+      playAdminNotificationSound();
+      setAdminPayoutToast({
+        id: adminNotif.id,
+        userEmail: adminNotif.userEmail,
+        userName: adminNotif.userName,
+        amountSat: adminNotif.amountSat,
+        wallet: adminNotif.wallet,
+        speed: adminNotif.speed,
+        date: adminNotif.date
+      });
     }
 
     setAdminLog(prev => [{
@@ -745,6 +808,53 @@ export default function Home() {
       success: true,
       message: `Заявка на вывод ${amountNum.toLocaleString('en-US')} SAT успешно сформирована!`
     });
+  };
+
+  const handleSendTestAdminPayoutNotification = () => {
+    const now = new Date();
+    const timestamp = now.getTime();
+    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const testReqId = `req_test_${timestamp.toString().slice(-4)}`;
+
+    const testNotif = {
+      id: testReqId,
+      userEmail: 'test_user_777@crypto.io',
+      userName: 'Артем Д. (Тест)',
+      amountSat: 75000,
+      feeSat: 1000,
+      netAmountSat: 74000,
+      wallet: 'bc1qtest99887766554433221100aabbccddeeff',
+      speed: 'Обычный (Slow)',
+      date: formattedDate,
+      status: 'Ожидает обработки',
+      timestamp,
+      unread: true
+    };
+
+    if (typeof window !== 'undefined') {
+      const existingNotifs = JSON.parse(localStorage.getItem('freebitco_admin_payout_notifications') || '[]');
+      const updatedNotifs = [testNotif, ...existingNotifs];
+      localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
+      setAdminPayoutNotifications(updatedNotifs);
+      notifyAdminSyncChannel('NEW_PAYOUT_REQUEST');
+      playAdminNotificationSound();
+      setAdminPayoutToast({
+        id: testNotif.id,
+        userEmail: testNotif.userEmail,
+        userName: testNotif.userName,
+        amountSat: testNotif.amountSat,
+        wallet: testNotif.wallet,
+        speed: testNotif.speed,
+        date: testNotif.date
+      });
+    }
+
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      text: `🧪 ТЕСТОВОЕ УВЕДОМЛЕНИЕ ВЫПЛАТЫ: Запрос #req_test от test_user_777@crypto.io`,
+      type: 'system'
+    }, ...prev]);
   };
 
   // --- REFS FOR AUTO-BOT RUNNING ---
@@ -1985,6 +2095,97 @@ export default function Home() {
 
             {/* Quick stats on Header */}
             <div className="flex items-center gap-2 md:gap-4">
+              {/* Admin Notification Bell Icon */}
+              {(currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email?.toLowerCase() === 'vadimmartin@ukr.net' || currentUser?.email === 'demo@freebitco.io') && (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsAdminNotifDropdownOpen(!isAdminNotifDropdownOpen)}
+                    className="p-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-300 transition-all relative flex items-center justify-center"
+                    title="Уведомления о выплатах (Админ)"
+                  >
+                    <Bell className="w-4 h-4 text-amber-400" />
+                    {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white font-bold text-[9px] rounded-full flex items-center justify-center animate-pulse shadow-md">
+                        {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length}
+                      </span>
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {isAdminNotifDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0c0d21] border border-amber-500/40 rounded-2xl p-4 shadow-2xl z-50 space-y-3"
+                      >
+                        <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                          <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-amber-400" />
+                            Запросы на вывод средств ({adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length})
+                          </span>
+                          <button
+                            onClick={() => setIsAdminNotifDropdownOpen(false)}
+                            className="text-slate-400 hover:text-white p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length === 0 ? (
+                          <div className="text-center py-4 text-slate-400 text-xs font-mono">
+                            ✅ Все заявки обработаны! Новых запросов нет.
+                          </div>
+                        ) : (
+                          <div className="max-h-64 overflow-y-auto space-y-2.5 pr-1">
+                            {adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').map((notif: any) => (
+                              <div key={notif.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-2">
+                                <div className="flex justify-between items-start text-xs">
+                                  <div>
+                                    <div className="font-bold text-white">{notif.userName}</div>
+                                    <div className="text-[10px] text-slate-400 font-mono">{notif.userEmail}</div>
+                                  </div>
+                                  <span className="text-xs font-bold text-emerald-400 font-mono">
+                                    {notif.amountSat?.toLocaleString()} SAT
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono truncate">
+                                  Кошелек: {notif.wallet}
+                                </div>
+                                <div className="flex items-center gap-2 pt-1">
+                                  <button
+                                    onClick={() => handleApprovePayoutRequest(notif.id)}
+                                    className="flex-1 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold text-center"
+                                  >
+                                    Одобрить
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectPayoutRequest(notif.id)}
+                                    className="flex-1 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold text-center"
+                                  >
+                                    Отклонить
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setIsAdminNotifDropdownOpen(false);
+                            setActiveDashboardTab('admin');
+                          }}
+                          className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold text-center transition-all"
+                        >
+                          Открыть Панель администратора →
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {/* BTC Ticker widget */}
               <div className="hidden lg:flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs" style={{ fontFamily: 'Verdana' }}>
                 <span className="font-bold text-slate-400">BTC/USD:</span>
@@ -2141,6 +2342,37 @@ export default function Home() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* TOP ADMIN NOTIFICATION BAR FOR PENDING PAYOUT REQUESTS */}
+          {(currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email?.toLowerCase() === 'vadimmartin@ukr.net' || currentUser?.email === 'demo@freebitco.io') && adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length > 0 && (
+            <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/25 to-amber-500/20 border-b border-amber-500/40 px-4 md:px-12 py-2.5 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-2 shadow-lg backdrop-blur-md">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                <span className="font-bold text-amber-300">
+                  🔔 Внимание Администратора:
+                </span>
+                <span>
+                  В системе <strong className="text-white font-mono">{adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length}</strong> новых необработанных заявок на вывод средств!
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleSendTestAdminPayoutNotification}
+                  className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-[11px] font-bold transition-all"
+                  title="Проверить тестовым уведомлением"
+                >
+                  🧪 Тест
+                </button>
+                <button
+                  onClick={() => setActiveDashboardTab('admin')}
+                  className="px-3.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-md"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Перейти к обработке ({adminPayoutNotifications.filter((n: any) => n.status === 'Ожидает обработки').length})
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Dynamic Content Panel */}
           <div className="p-4 md:p-12 max-w-7xl w-full mx-auto space-y-6 md:space-y-8 flex-1">
@@ -3380,6 +3612,13 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      <button
+                        onClick={handleSendTestAdminPayoutNotification}
+                        className="px-3.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-200 transition-all flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Bell className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+                        🧪 Тест уведомления
+                      </button>
                       <button
                         onClick={handleRefreshAdminData}
                         disabled={isRefreshingAdmin}
@@ -5516,6 +5755,78 @@ export default function Home() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* FLOATING REAL-TIME ADMIN PAYOUT NOTIFICATION TOAST CARD */}
+      <AnimatePresence>
+        {adminPayoutToast && (currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes('admin') || currentUser?.email?.toLowerCase() === 'vadimmartin@ukr.net' || currentUser?.email === 'demo@freebitco.io') && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#08091a]/95 border-2 border-amber-500/60 rounded-2xl p-4 shadow-[0_0_35px_rgba(245,158,11,0.4)] backdrop-blur-xl space-y-3"
+            style={{ fontFamily: 'Georgia' }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-amber-500/20 border border-amber-500/40 rounded-xl text-amber-400 animate-bounce">
+                  <Bell className="w-5 h-5" />
+                </span>
+                <div>
+                  <div className="text-xs font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🔔 Новый запрос на вывод!</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">{adminPayoutToast.date}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setAdminPayoutToast(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-1.5 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Пользователь:</span>
+                <span className="font-bold text-white truncate max-w-[170px]">{adminPayoutToast.userEmail}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Сумма к выводу:</span>
+                <span className="font-extrabold text-emerald-400">{adminPayoutToast.amountSat?.toLocaleString()} SAT</span>
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span className="text-slate-400">Эквивалент:</span>
+                <span className="text-amber-300">~${(((adminPayoutToast.amountSat || 0) / 100000000) * btcPrice).toFixed(2)} USD</span>
+              </div>
+              <div className="text-[10px] text-slate-400 truncate pt-1 border-t border-white/5">
+                BTC Кошелек: <span className="text-slate-200">{adminPayoutToast.wallet}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  handleApprovePayoutRequest(adminPayoutToast.id);
+                  setAdminPayoutToast(null);
+                }}
+                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-1 shadow-lg"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Одобрить
+              </button>
+              <button
+                onClick={() => {
+                  handleRejectPayoutRequest(adminPayoutToast.id);
+                  setAdminPayoutToast(null);
+                }}
+                className="flex-1 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1"
+              >
+                <AlertTriangle className="w-4 h-4" /> Отклонить
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
