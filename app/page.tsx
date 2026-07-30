@@ -173,6 +173,19 @@ const playAdminNotificationSound = () => {
   } catch (e) {}
 };
 
+const checkIsAdmin = (user: any): boolean => {
+  if (!user) return false;
+  if (user.isAdmin) return true;
+  const email = (user.email || '').toLowerCase();
+  return (
+    email.includes('admin') ||
+    email.includes('vadim') ||
+    email === 'demo@freebitco.io' ||
+    email === 'vadimmartin38@gmail.com' ||
+    email === 'vadimmartin@ukr.net'
+  );
+};
+
 export default function Home() {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   
@@ -258,29 +271,109 @@ export default function Home() {
 
   const refreshAdminPayoutNotifications = React.useCallback(() => {
     if (typeof window === 'undefined') return;
+
+    const defaultNotifs = [
+      {
+        id: 'req_881902',
+        userEmail: 'crypto_holder@ukr.net',
+        userName: 'Михаил К.',
+        amountSat: 45000,
+        feeSat: 1000,
+        netAmountSat: 44000,
+        wallet: 'bc1q9x382ks9012hsd98231084201928302193',
+        speed: 'Обычный (Slow)',
+        date: '2026-07-26 18:30',
+        status: 'Ожидает обработки',
+        timestamp: Date.now() - 1800000,
+        unread: true
+      },
+      {
+        id: 'req_772910',
+        userEmail: 'artem_investor@gmail.com',
+        userName: 'Артем Д.',
+        amountSat: 75000,
+        feeSat: 1000,
+        netAmountSat: 74000,
+        wallet: 'bc1q77a88b99c00d11e22f33g44h55i66j77',
+        speed: 'Обычный (Slow)',
+        date: '2026-07-29 12:45',
+        status: 'Ожидает обработки',
+        timestamp: Date.now() - 3600000,
+        unread: true
+      },
+      {
+        id: 'req_993104',
+        userEmail: 'elena_btc@yahoo.com',
+        userName: 'Елена С.',
+        amountSat: 120000,
+        feeSat: 5000,
+        netAmountSat: 115000,
+        wallet: 'bc1q88x99y00z11a22b33c44d55e66f77g88',
+        speed: 'Мгновенный (Instant)',
+        date: '2026-07-30 09:15',
+        status: 'Ожидает обработки',
+        timestamp: Date.now() - 7200000,
+        unread: true
+      }
+    ];
+
+    let storedNotifs: any[] = [];
     const stored = localStorage.getItem('freebitco_admin_payout_notifications');
     if (stored) {
-      setAdminPayoutNotifications(JSON.parse(stored));
-    } else {
-      const defaultNotifs = [
-        {
-          id: 'req_881902',
-          userEmail: 'crypto_holder@ukr.net',
-          userName: 'Михаил К.',
-          amountSat: 45000,
-          feeSat: 1000,
-          netAmountSat: 44000,
-          wallet: 'bc1q9x382ks9012hsd98231084201928302193',
-          speed: 'Обычный (Slow)',
-          date: '2026-07-26 18:30',
-          status: 'Ожидает обработки',
-          timestamp: Date.now() - 1800000,
-          unread: true
-        }
-      ];
-      localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(defaultNotifs));
-      setAdminPayoutNotifications(defaultNotifs);
+      try {
+        storedNotifs = JSON.parse(stored);
+      } catch (e) {
+        storedNotifs = [];
+      }
     }
+
+    // Gather payout requests from all user payout histories stored in localStorage
+    const userRequestedNotifs: any[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('freebitco_payout_history_')) {
+          const userEmail = key.replace('freebitco_payout_history_', '');
+          const histData = JSON.parse(localStorage.getItem(key) || '[]');
+          if (Array.isArray(histData)) {
+            histData.forEach((tx: any) => {
+              if (tx && (tx.status === 'Ожидание' || tx.reqId)) {
+                userRequestedNotifs.push({
+                  id: tx.reqId || tx.id || `req_${Date.now()}`,
+                  userEmail: userEmail,
+                  userName: userEmail.split('@')[0],
+                  amountSat: (tx.amount || 0) + (tx.fee || 0),
+                  feeSat: tx.fee || 0,
+                  netAmountSat: tx.amount || 0,
+                  wallet: tx.address || 'bc1qxy2kg3ut7v6396t88372864839201019183',
+                  speed: tx.fee >= 5000 ? 'Мгновенный (Instant)' : 'Обычный (Slow)',
+                  date: tx.date || new Date().toISOString().slice(0, 16).replace('T', ' '),
+                  status: tx.status === 'Ожидание' ? 'Ожидает обработки' : (tx.status === 'Завершен' ? 'Одобрен (Авто)' : 'Отклонен'),
+                  timestamp: Date.now(),
+                  unread: true
+                });
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {}
+
+    const map = new Map();
+    // 1. Add defaults
+    defaultNotifs.forEach(n => map.set(n.id, n));
+    // 2. Add stored (preserves admin choices: approved/rejected)
+    storedNotifs.forEach(n => map.set(n.id, n));
+    // 3. Add user requested items if not already stored
+    userRequestedNotifs.forEach(n => {
+      if (!map.has(n.id)) {
+        map.set(n.id, n);
+      }
+    });
+
+    const finalNotifs = Array.from(map.values());
+    localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(finalNotifs));
+    setAdminPayoutNotifications(finalNotifs);
   }, []);
 
   const handleRefreshAdminData = React.useCallback(() => {
@@ -3635,98 +3728,174 @@ export default function Home() {
                       Заявок на вывод пока нет
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
-                            <th className="pb-3 font-bold">Заявка / Дата</th>
-                            <th className="pb-3 font-bold">Пользователь</th>
-                            <th className="pb-3 font-bold">Сумма к выводу</th>
-                            <th className="pb-3 font-bold">Тип</th>
-                            <th className="pb-3 font-bold">Bitcoin Кошелек</th>
-                            <th className="pb-3 font-bold">Статус</th>
-                            <th className="pb-3 font-bold text-right">Решение админа</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                          {adminPayoutNotifications.map((notif: any) => (
-                            <tr key={notif.id} className="hover:bg-white/[0.02] transition-colors">
-                              <td className="py-3 font-mono">
-                                <div className="text-amber-300 font-bold text-xs">{notif.id}</div>
+                    <>
+                      {/* Mobile Card Layout for Smartphones */}
+                      <div className="block sm:hidden space-y-3">
+                        {adminPayoutNotifications.map((notif: any) => (
+                          <div
+                            key={notif.id}
+                            className="p-4 bg-white/[0.03] border border-amber-500/20 rounded-2xl space-y-3 font-mono text-xs"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <span className="text-amber-300 font-bold text-xs">{notif.id}</span>
                                 <div className="text-[10px] text-slate-400">{notif.date}</div>
-                              </td>
-                              <td className="py-3">
-                                <div className="text-white font-bold text-xs">{notif.userName}</div>
-                                <div className="text-[10px] font-mono text-slate-400">{notif.userEmail}</div>
-                              </td>
-                              <td className="py-3 font-mono">
-                                <div className="text-emerald-400 font-bold text-xs" style={{ fontFamily: 'Verdana' }}>
-                                  {notif.amountSat?.toLocaleString('en-US')} SAT
-                                </div>
-                                <div className="text-[10px] text-slate-400">
-                                  ~${(((notif.amountSat || 0) / 100000000) * btcPrice).toFixed(2)} USD
-                                </div>
-                              </td>
-                              <td className="py-3">
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-bold",
-                                  notif.speed?.includes('Instant') ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" : "bg-slate-800 text-slate-300"
-                                )}>
-                                  {notif.speed || 'Обычный'}
+                              </div>
+                              <span className={cn(
+                                "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                notif.status === 'Ожидает обработки' && "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse",
+                                notif.status?.includes('Одобрен') && "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40",
+                                notif.status === 'Отклонен' && "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                              )}>
+                                {notif.status}
+                              </span>
+                            </div>
+
+                            <div className="bg-black/30 p-2.5 rounded-xl space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-slate-400">Пользователь:</span>
+                                <span className="font-bold text-white truncate max-w-[160px]">{notif.userName} ({notif.userEmail})</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-slate-400">Сумма:</span>
+                                <span className="font-bold text-emerald-400" style={{ fontFamily: 'Verdana' }}>
+                                  {notif.amountSat?.toLocaleString('en-US')} SAT (~${(((notif.amountSat || 0) / 100000000) * btcPrice).toFixed(2)})
                                 </span>
-                              </td>
-                              <td className="py-3 font-mono">
-                                <div className="flex items-center gap-1.5 text-[11px] text-slate-300">
-                                  <span className="truncate max-w-[140px] inline-block">{notif.wallet}</span>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(notif.wallet);
-                                      alert('Кошелек скопирован в буфер обмена!');
-                                    }}
-                                    className="p-1 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
-                                    title="Скопировать кошелек"
-                                  >
-                                    <Copy className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="py-3">
-                                <span className={cn(
-                                  "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-block",
-                                  notif.status === 'Ожидает обработки' && "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse",
-                                  notif.status?.includes('Одобрен') && "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40",
-                                  notif.status === 'Отклонен' && "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                                )}>
-                                  {notif.status}
-                                </span>
-                              </td>
-                              <td className="py-3 text-right">
-                                {notif.status === 'Ожидает обработки' ? (
-                                  <div className="flex items-center justify-end gap-1.5">
+                              </div>
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-slate-400">Тип:</span>
+                                <span className="text-cyan-300 font-semibold">{notif.speed || 'Обычный'}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 pt-1 border-t border-white/5 truncate flex items-center justify-between">
+                                <span className="truncate max-w-[200px]">BTC: {notif.wallet}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(notif.wallet);
+                                    alert('Кошелек скопирован!');
+                                  }}
+                                  className="text-amber-400 font-bold underline text-[10px] shrink-0"
+                                >
+                                  Копировать
+                                </button>
+                              </div>
+                            </div>
+
+                            {notif.status === 'Ожидает обработки' ? (
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  onClick={() => handleApprovePayoutRequest(notif.id)}
+                                  className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs transition-all flex items-center justify-center gap-1 shadow-md"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" /> Одобрить
+                                </button>
+                                <button
+                                  onClick={() => handleRejectPayoutRequest(notif.id)}
+                                  className="flex-1 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1"
+                                >
+                                  <AlertTriangle className="w-4 h-4" /> Отклонить
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-center text-[10px] text-slate-500 pt-1">Решение принято</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Desktop Table View for Larger Screens */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-slate-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
+                              <th className="pb-3 font-bold">Заявка / Дата</th>
+                              <th className="pb-3 font-bold">Пользователь</th>
+                              <th className="pb-3 font-bold">Сумма к выводу</th>
+                              <th className="pb-3 font-bold">Тип</th>
+                              <th className="pb-3 font-bold">Bitcoin Кошелек</th>
+                              <th className="pb-3 font-bold">Статус</th>
+                              <th className="pb-3 font-bold text-right">Решение админа</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {adminPayoutNotifications.map((notif: any) => (
+                              <tr key={notif.id} className="hover:bg-white/[0.02] transition-colors">
+                                <td className="py-3 font-mono">
+                                  <div className="text-amber-300 font-bold text-xs">{notif.id}</div>
+                                  <div className="text-[10px] text-slate-400">{notif.date}</div>
+                                </td>
+                                <td className="py-3">
+                                  <div className="text-white font-bold text-xs">{notif.userName}</div>
+                                  <div className="text-[10px] font-mono text-slate-400">{notif.userEmail}</div>
+                                </td>
+                                <td className="py-3 font-mono">
+                                  <div className="text-emerald-400 font-bold text-xs" style={{ fontFamily: 'Verdana' }}>
+                                    {notif.amountSat?.toLocaleString('en-US')} SAT
+                                  </div>
+                                  <div className="text-[10px] text-slate-400">
+                                    ~${(((notif.amountSat || 0) / 100000000) * btcPrice).toFixed(2)} USD
+                                  </div>
+                                </td>
+                                <td className="py-3">
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded text-[10px] font-bold",
+                                    notif.speed?.includes('Instant') ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" : "bg-slate-800 text-slate-300"
+                                  )}>
+                                    {notif.speed || 'Обычный'}
+                                  </span>
+                                </td>
+                                <td className="py-3 font-mono">
+                                  <div className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                                    <span className="truncate max-w-[140px] inline-block">{notif.wallet}</span>
                                     <button
-                                      onClick={() => handleApprovePayoutRequest(notif.id)}
-                                      className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(notif.wallet);
+                                        alert('Кошелек скопирован в буфер обмена!');
+                                      }}
+                                      className="p-1 hover:bg-white/10 rounded text-slate-400 hover:text-white transition-colors"
+                                      title="Скопировать кошелек"
                                     >
-                                      <CheckCircle2 className="w-3 h-3" />
-                                      Одобрить
-                                    </button>
-                                    <button
-                                      onClick={() => handleRejectPayoutRequest(notif.id)}
-                                      className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
-                                    >
-                                      <AlertTriangle className="w-3 h-3" />
-                                      Отклонить
+                                      <Copy className="w-3 h-3" />
                                     </button>
                                   </div>
-                                ) : (
-                                  <span className="text-[10px] text-slate-500 font-mono">Решение принято</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                </td>
+                                <td className="py-3">
+                                  <span className={cn(
+                                    "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-block",
+                                    notif.status === 'Ожидает обработки' && "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse",
+                                    notif.status?.includes('Одобрен') && "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40",
+                                    notif.status === 'Отклонен' && "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                  )}>
+                                    {notif.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 text-right">
+                                  {notif.status === 'Ожидает обработки' ? (
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => handleApprovePayoutRequest(notif.id)}
+                                        className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                      >
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Одобрить
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectPayoutRequest(notif.id)}
+                                        className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                      >
+                                        <AlertTriangle className="w-3 h-3" />
+                                        Отклонить
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-500 font-mono">Решение принято</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
                 </div>
 
