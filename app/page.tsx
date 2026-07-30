@@ -209,6 +209,7 @@ export default function Home() {
     isAdmin: false
   });
 
+  const [isRefreshingAdmin, setIsRefreshingAdmin] = React.useState<boolean>(false);
   const [adminLog, setAdminLog] = React.useState<Array<{ id: number; time: string; text: string; type: 'info' | 'user' | 'system' }>>([
     { id: 1, time: '18:42', text: 'Админ-панель инициализирована. Система работает штатно.', type: 'system' },
     { id: 2, time: '18:40', text: 'Резервная копия структуры пользователей обновлена в LocalStorage.', type: 'info' }
@@ -251,8 +252,41 @@ export default function Home() {
     }
   }, []);
 
+  const handleRefreshAdminData = React.useCallback(() => {
+    setIsRefreshingAdmin(true);
+    refreshAdminPayoutNotifications();
+    refreshAdminUsersList();
+    if (typeof window !== 'undefined') {
+      const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+      setTotalPaidOut(BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra));
+      notifyAdminSyncChannel('MANUAL_REFRESH');
+    }
+    setAdminLog(prev => [{
+      id: Date.now(),
+      time: new Date().toLocaleTimeString().slice(0, 5),
+      text: 'Запрошено ручное обновление актуальной информации',
+      type: 'system'
+    }, ...prev]);
+    setTimeout(() => {
+      setIsRefreshingAdmin(false);
+    }, 600);
+  }, [refreshAdminPayoutNotifications, refreshAdminUsersList]);
+
   // Real-time synchronization of users and payouts for admin panel and current user
   React.useEffect(() => {
+    let broadcastChannel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        broadcastChannel = new BroadcastChannel('freebitco_admin_sync_channel');
+        broadcastChannel.onmessage = () => {
+          refreshAdminUsersList();
+          refreshAdminPayoutNotifications();
+          const storedExtra = parseFloat(localStorage.getItem('freebitco_extra_paid_out') || '0');
+          setTotalPaidOut(BASE_PAID_OUT + (isNaN(storedExtra) ? 0 : storedExtra));
+        };
+      } catch (e) {}
+    }
+
     const timer = setTimeout(() => {
       refreshAdminUsersList();
       refreshAdminPayoutNotifications();
@@ -294,13 +328,26 @@ export default function Home() {
           } catch (e) {}
         }
       }
-    }, 1500);
+    }, 1000);
     return () => {
       clearTimeout(timer);
+      if (broadcastChannel) broadcastChannel.close();
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(syncInterval);
     };
   }, [refreshAdminUsersList, refreshAdminPayoutNotifications]);
+
+  const notifyAdminSyncChannel = (actionType: string) => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(new Event('storage'));
+      if ('BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('freebitco_admin_sync_channel');
+        ch.postMessage({ type: actionType, timestamp: Date.now() });
+        ch.close();
+      }
+    } catch (e) {}
+  };
 
   const handleApprovePayoutRequest = (notifId: string) => {
     const approvedNotif = adminPayoutNotifications.find((n: any) => n.id === notifId);
@@ -342,6 +389,8 @@ export default function Home() {
       text: `✅ ОДОБРЕНА ВЫПЛАТА #${notifId}: ${approvedNotif?.userEmail} (${approvedNotif?.amountSat?.toLocaleString()} SAT)`,
       type: 'user'
     }, ...prev]);
+
+    notifyAdminSyncChannel('APPROVE_PAYOUT');
   };
 
   const handleRejectPayoutRequest = (notifId: string) => {
@@ -393,6 +442,8 @@ export default function Home() {
       text: `❌ ОТКЛОНЕНА ВЫПЛАТА #${notifId}: Средства (${targetNotif.amountSat?.toLocaleString()} SAT) возвращены на баланс ${targetNotif.userEmail}`,
       type: 'user'
     }, ...prev]);
+
+    notifyAdminSyncChannel('REJECT_PAYOUT');
   };
 
   React.useEffect(() => {
@@ -437,6 +488,7 @@ export default function Home() {
 
   // --- MULTIPLY BTC (HI-LO) GAME STATE ---
   const [multiplyBet, setMultiplyBet] = React.useState(10);
+  const [forcedLossStreak, setForcedLossStreak] = React.useState(0);
   const [multiplyResult, setMultiplyResult] = React.useState<{
     rolled: number | null;
     won: boolean | null;
@@ -450,6 +502,61 @@ export default function Home() {
     isHigh: boolean;
     won: boolean;
   }>>([]);
+
+  // --- LOSS STREAK ENGINE (Череда сливов при частых выигрышах) ---
+  const forcedLossStreakRemainingRef = React.useRef(0);
+  const consecutiveWinsRef = React.useRef(0);
+  const gameHistoryRef = React.useRef<boolean[]>([]);
+
+  const calculateGameOutcome = React.useCallback((betOnHigh: boolean) => {
+    let forceLoss = false;
+
+    // 1. If currently in an active forced loss streak ("череда сливов")
+    if (forcedLossStreakRemainingRef.current > 0) {
+      forceLoss = true;
+      forcedLossStreakRemainingRef.current -= 1;
+      setForcedLossStreak(forcedLossStreakRemainingRef.current);
+    } else {
+      // 2. Check if user is winning frequently:
+      const recent = gameHistoryRef.current.slice(-5);
+      const recentWins = recent.filter(w => w).length;
+      const isFrequentWinner = consecutiveWinsRef.current >= 2 || (recent.length >= 3 && recentWins >= 2);
+
+      if (isFrequentWinner) {
+        // Trigger a forced loss streak ("череда сливов") of 3 to 6 consecutive losses!
+        const streakLength = Math.floor(Math.random() * 4) + 3; // 3, 4, 5, or 6 losses
+        forcedLossStreakRemainingRef.current = streakLength - 1; // 1 used on current roll
+        setForcedLossStreak(streakLength - 1);
+        forceLoss = true;
+      }
+    }
+
+    let rolled: number;
+    let won: boolean;
+
+    if (forceLoss) {
+      won = false;
+      if (betOnHigh) {
+        // HIGH requires > 5250, so forced loss generates <= 5250
+        rolled = Math.floor(Math.random() * 5251);
+      } else {
+        // LOW requires < 4750, so forced loss generates >= 4750
+        rolled = 4750 + Math.floor(Math.random() * 5250);
+      }
+    } else {
+      rolled = Math.floor(Math.random() * 10000);
+      won = betOnHigh ? rolled > 5250 : rolled < 4750;
+    }
+
+    if (won) {
+      consecutiveWinsRef.current += 1;
+    } else {
+      consecutiveWinsRef.current = 0;
+    }
+    gameHistoryRef.current = [...gameHistoryRef.current.slice(-9), won];
+
+    return { rolled, won };
+  }, []);
 
   // --- MARTINGALE BOT AUTOMATION ---
   const [isBotRunning, setIsBotRunning] = React.useState(false);
@@ -615,6 +722,7 @@ export default function Home() {
       const updatedNotifs = [adminNotif, ...existingNotifs];
       localStorage.setItem('freebitco_admin_payout_notifications', JSON.stringify(updatedNotifs));
       setAdminPayoutNotifications(updatedNotifs);
+      notifyAdminSyncChannel('NEW_PAYOUT_REQUEST');
     }
 
     setAdminLog(prev => [{
@@ -853,10 +961,21 @@ export default function Home() {
         if (user) {
           setTimeout(() => {
             const now = Date.now();
-            if (!sessionStorage.getItem('hasShownIdleModal')) {
-              setIdleModalOpen(true);
-              sessionStorage.setItem('hasShownIdleModal', 'true');
+            const lastVisitKey = `freebitco_last_visit_${user.email.toLowerCase()}`;
+            const lastVisitStr = localStorage.getItem(lastVisitKey);
+            if (lastVisitStr) {
+              const lastVisitTime = parseInt(lastVisitStr, 10);
+              const IDLE_THRESHOLD_MS = 15 * 60 * 1000; // 15 минут отсутствия
+              if (!isNaN(lastVisitTime) && (now - lastVisitTime) >= IDLE_THRESHOLD_MS) {
+                setIdleModalOpen(true);
+              } else {
+                setIdleModalOpen(false);
+              }
+            } else {
+              setIdleModalOpen(false);
             }
+            localStorage.setItem(lastVisitKey, now.toString());
+
             const isUserAdmin = user.isAdmin ?? (
               user.email.toLowerCase() === 'vadimmartin@ukr.net' ||
               user.email === 'demo@freebitco.io' ||
@@ -1112,26 +1231,43 @@ export default function Home() {
     };
   }, [isLoggedIn, referralList]);
 
-  // Detect tab backgrounding / return after idle
+  // Detect tab backgrounding / return after prolonged idle (e.g. >15 min away)
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !isLoggedIn || !currentUser?.email) return;
     let hiddenTime = 0;
+    const userEmailKey = currentUser.email.toLowerCase();
+    const lastVisitKey = `freebitco_last_visit_${userEmailKey}`;
+
+    // Continuously update active timestamp every 15s while active
+    const activeInterval = setInterval(() => {
+      if (!document.hidden) {
+        localStorage.setItem(lastVisitKey, Date.now().toString());
+      }
+    }, 15000);
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
         hiddenTime = Date.now();
+        localStorage.setItem(lastVisitKey, hiddenTime.toString());
       } else {
         if (hiddenTime > 0) {
+          const awayMs = Date.now() - hiddenTime;
+          const IDLE_THRESHOLD_MS = 15 * 60 * 1000; // 15 минут
+          if (awayMs >= IDLE_THRESHOLD_MS) {
+            setIdleModalOpen(true);
+          }
           hiddenTime = 0;
         }
+        localStorage.setItem(lastVisitKey, Date.now().toString());
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      clearInterval(activeInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isLoggedIn, isDashboardOpen]);
+  }, [isLoggedIn, currentUser?.email]);
 
   // Two-way calculator synchronization
   React.useEffect(() => {
@@ -1166,6 +1302,21 @@ export default function Home() {
 
     if (user) {
       const now = Date.now();
+      const lastVisitKey = `freebitco_last_visit_${user.email.toLowerCase()}`;
+      const lastVisitStr = localStorage.getItem(lastVisitKey);
+      if (lastVisitStr) {
+        const lastVisitTime = parseInt(lastVisitStr, 10);
+        const IDLE_THRESHOLD_MS = 15 * 60 * 1000;
+        if (!isNaN(lastVisitTime) && (now - lastVisitTime) >= IDLE_THRESHOLD_MS) {
+          setIdleModalOpen(true);
+        } else {
+          setIdleModalOpen(false);
+        }
+      } else {
+        setIdleModalOpen(false);
+      }
+      localStorage.setItem(lastVisitKey, now.toString());
+
       const isUserAdmin = user.isAdmin ?? (
         user.email.toLowerCase() === 'vadimmartin@ukr.net' ||
         user.email === 'demo@freebitco.io' ||
@@ -1188,6 +1339,21 @@ export default function Home() {
     const demoUser = accounts.find((a: any) => a.email === 'demo@freebitco.io');
     if (demoUser) {
       const now = Date.now();
+      const lastVisitKey = `freebitco_last_visit_${demoUser.email.toLowerCase()}`;
+      const lastVisitStr = localStorage.getItem(lastVisitKey);
+      if (lastVisitStr) {
+        const lastVisitTime = parseInt(lastVisitStr, 10);
+        const IDLE_THRESHOLD_MS = 15 * 60 * 1000;
+        if (!isNaN(lastVisitTime) && (now - lastVisitTime) >= IDLE_THRESHOLD_MS) {
+          setIdleModalOpen(true);
+        } else {
+          setIdleModalOpen(false);
+        }
+      } else {
+        setIdleModalOpen(false);
+      }
+      localStorage.setItem(lastVisitKey, now.toString());
+
       const updatedUser = { ...demoUser, lastMiningTimestamp: now };
       localStorage.setItem('freebitco_session', updatedUser.email);
       setCurrentUser(updatedUser);
@@ -1361,14 +1527,7 @@ export default function Home() {
       return;
     }
 
-    const rolled = Math.floor(Math.random() * 10000);
-    let won = false;
-
-    if (betOnHigh) {
-      won = rolled > 5250;
-    } else {
-      won = rolled < 4750;
-    }
+    const { rolled, won } = calculateGameOutcome(betOnHigh);
 
     const change = won ? multiplyBet : -multiplyBet;
     const updatedUser = {
@@ -1418,9 +1577,8 @@ export default function Home() {
     // Play random HI/LO choice for bot activity
     const botChoiceHigh = Math.random() > 0.5;
     
-    // Simulate game
-    const rolled = Math.floor(Math.random() * 10000);
-    const won = botChoiceHigh ? rolled > 5250 : rolled < 4750;
+    // Simulate game with loss streak logic
+    const { rolled, won } = calculateGameOutcome(botChoiceHigh);
     const change = won ? currentBet : -currentBet;
 
     // Record game
@@ -2269,6 +2427,16 @@ export default function Home() {
                     Выиграйте 2x от ставки! (Мин 1 SAT)
                   </div>
                 </div>
+
+                {forcedLossStreak > 0 && (
+                  <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl text-xs flex items-center justify-between font-bold animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>Активирован алгоритм коррекции шансов: идет череда сливов из-за частых выигрышей</span>
+                    </div>
+                    <span className="font-mono bg-rose-500/20 px-2.5 py-1 rounded-xl text-[10px] text-rose-300">Осталось сливов: {forcedLossStreak}</span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Manual Game Box */}
@@ -3213,11 +3381,12 @@ export default function Home() {
 
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       <button
-                        onClick={refreshAdminPayoutNotifications}
-                        className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 transition-all flex items-center gap-1.5"
+                        onClick={handleRefreshAdminData}
+                        disabled={isRefreshingAdmin}
+                        className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 disabled:opacity-50 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 transition-all flex items-center gap-1.5"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        Обновить
+                        <RotateCcw className={cn("w-3.5 h-3.5", isRefreshingAdmin && "animate-spin text-amber-400")} />
+                        {isRefreshingAdmin ? 'Обновление...' : 'Обновить'}
                       </button>
                     </div>
                   </div>
