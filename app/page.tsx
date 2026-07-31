@@ -272,50 +272,7 @@ export default function Home() {
   const refreshAdminPayoutNotifications = React.useCallback(() => {
     if (typeof window === 'undefined') return;
 
-    const defaultNotifs = [
-      {
-        id: 'req_881902',
-        userEmail: 'crypto_holder@ukr.net',
-        userName: 'Михаил К.',
-        amountSat: 45000,
-        feeSat: 1000,
-        netAmountSat: 44000,
-        wallet: 'bc1q9x382ks9012hsd98231084201928302193',
-        speed: 'Обычный (Slow)',
-        date: '2026-07-26 18:30',
-        status: 'Ожидает обработки',
-        timestamp: Date.now() - 1800000,
-        unread: true
-      },
-      {
-        id: 'req_772910',
-        userEmail: 'artem_investor@gmail.com',
-        userName: 'Артем Д.',
-        amountSat: 75000,
-        feeSat: 1000,
-        netAmountSat: 74000,
-        wallet: 'bc1q77a88b99c00d11e22f33g44h55i66j77',
-        speed: 'Обычный (Slow)',
-        date: '2026-07-29 12:45',
-        status: 'Ожидает обработки',
-        timestamp: Date.now() - 3600000,
-        unread: true
-      },
-      {
-        id: 'req_993104',
-        userEmail: 'elena_btc@yahoo.com',
-        userName: 'Елена С.',
-        amountSat: 120000,
-        feeSat: 5000,
-        netAmountSat: 115000,
-        wallet: 'bc1q88x99y00z11a22b33c44d55e66f77g88',
-        speed: 'Мгновенный (Instant)',
-        date: '2026-07-30 09:15',
-        status: 'Ожидает обработки',
-        timestamp: Date.now() - 7200000,
-        unread: true
-      }
-    ];
+    const defaultNotifs: any[] = [];
 
     let storedNotifs: any[] = [];
     const stored = localStorage.getItem('freebitco_admin_payout_notifications');
@@ -971,7 +928,20 @@ export default function Home() {
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const existingAccounts = localStorage.getItem('freebitco_accounts');
-      let accountsList = existingAccounts ? JSON.parse(existingAccounts) : [];
+      const demoEmailsToRemove = [
+        'crypto_holder@ukr.net',
+        'elena.petrova@crypto.ua',
+        'alexey_smirnov@gmail.com',
+        'oleg.shatov@ukr.net',
+        'satoshi_fan2026@gmail.com',
+        'anna_melnikova@ukr.net',
+        'demo@freebitco.io',
+        'admin@freebitco.io'
+      ];
+      
+      let accountsList = (existingAccounts ? JSON.parse(existingAccounts) : []).filter(
+        (a: any) => !demoEmailsToRemove.includes(a.email?.toLowerCase())
+      );
       
       const defaultUsersToEnsure = [
         {
@@ -982,7 +952,7 @@ export default function Home() {
           wallet: 'bc1qvadimmartin9999999999999999999999',
           refId: 'vadim1',
           refShare: 50,
-          balance: 5000000,
+          balance: 50000000,
           cumulativeClaims: 150,
           rollsCount: 150,
           loyaltyPoints: 5000,
@@ -990,142 +960,6 @@ export default function Home() {
           twoFactorEnabled: true,
           isAdmin: true,
           createdAt: '20.07.2026, 10:00'
-        },
-        {
-          email: 'crypto_holder@ukr.net',
-          password: 'user123',
-          name: 'Михаил Ковалев',
-          avatar: 'https://picsum.photos/seed/mikhail/100/100',
-          wallet: 'bc1q9x382ks9012hsd98231084201928302193',
-          refId: 'mikhail88',
-          refShare: 25,
-          balance: 845200,
-          cumulativeClaims: 88,
-          rollsCount: 88,
-          loyaltyPoints: 1760,
-          tier: 'Gold',
-          twoFactorEnabled: true,
-          isAdmin: false,
-          createdAt: '21.07.2026, 14:15'
-        },
-        {
-          email: 'elena.petrova@crypto.ua',
-          password: 'user123',
-          name: 'Елена Петрова',
-          avatar: 'https://picsum.photos/seed/elena/100/100',
-          wallet: 'bc1q88a912ks3019shd0182740192837482910',
-          refId: 'elena312',
-          refShare: 15,
-          balance: 312400,
-          cumulativeClaims: 42,
-          rollsCount: 42,
-          loyaltyPoints: 840,
-          tier: 'Silver',
-          twoFactorEnabled: false,
-          isAdmin: false,
-          createdAt: '22.07.2026, 09:40'
-        },
-        {
-          email: 'alexey_smirnov@gmail.com',
-          password: 'user123',
-          name: 'Алексей Смирнов',
-          avatar: 'https://picsum.photos/seed/alexey/100/100',
-          wallet: 'bc1q777881923ks0192384729102837482910',
-          refId: 'alex77',
-          refShare: 35,
-          balance: 1250000,
-          cumulativeClaims: 195,
-          rollsCount: 195,
-          loyaltyPoints: 3900,
-          tier: 'Platinum',
-          twoFactorEnabled: true,
-          isAdmin: false,
-          createdAt: '23.07.2026, 17:20'
-        },
-        {
-          email: 'oleg.shatov@ukr.net',
-          password: 'user123',
-          name: 'Олег Шатов',
-          avatar: 'https://picsum.photos/seed/oleg/100/100',
-          wallet: 'bc1q6655443322110099887766554433221100',
-          refId: 'oleg95',
-          refShare: 10,
-          balance: 95000,
-          cumulativeClaims: 18,
-          rollsCount: 18,
-          loyaltyPoints: 360,
-          tier: 'Bronze',
-          twoFactorEnabled: false,
-          isAdmin: false,
-          createdAt: '24.07.2026, 11:05'
-        },
-        {
-          email: 'satoshi_fan2026@gmail.com',
-          password: 'user123',
-          name: 'Дмитрий Василенко',
-          avatar: 'https://picsum.photos/seed/dmitry/100/100',
-          wallet: 'bc1q11223344556677889900aabbccddeeff00',
-          refId: 'sat2026',
-          refShare: 20,
-          balance: 420000,
-          cumulativeClaims: 65,
-          rollsCount: 65,
-          loyaltyPoints: 1300,
-          tier: 'Gold',
-          twoFactorEnabled: false,
-          isAdmin: false,
-          createdAt: '25.07.2026, 16:50'
-        },
-        {
-          email: 'anna_melnikova@ukr.net',
-          password: 'user123',
-          name: 'Анна Мельникова',
-          avatar: 'https://picsum.photos/seed/anna/100/100',
-          wallet: 'bc1q223344556677889900aabbccddeeff11',
-          refId: 'anna18',
-          refShare: 10,
-          balance: 18500,
-          cumulativeClaims: 8,
-          rollsCount: 8,
-          loyaltyPoints: 160,
-          tier: 'Bronze',
-          twoFactorEnabled: false,
-          isAdmin: false,
-          createdAt: '26.07.2026, 08:30'
-        },
-        {
-          email: 'demo@freebitco.io',
-          password: 'demo123',
-          name: 'Крипто Бро',
-          avatar: 'https://picsum.photos/seed/avatar1/100/100',
-          wallet: 'bc1qxy2kg3ut7v6396t88372864839201019183',
-          refId: 'demo999',
-          refShare: 25,
-          balance: 15420,
-          cumulativeClaims: 4,
-          rollsCount: 4,
-          loyaltyPoints: 120,
-          tier: 'Bronze',
-          twoFactorEnabled: false,
-          isAdmin: true,
-          createdAt: '20.07.2026, 12:00'
-        },
-        {
-          email: 'admin@freebitco.io',
-          password: 'admin',
-          name: 'Главный Администратор',
-          avatar: 'https://picsum.photos/seed/admin/100/100',
-          wallet: 'bc1qadmin99999999999999999999999999999',
-          refId: 'admin1',
-          refShare: 50,
-          balance: 5000000,
-          cumulativeClaims: 150,
-          rollsCount: 150,
-          loyaltyPoints: 5000,
-          tier: 'Platinum',
-          twoFactorEnabled: true,
-          isAdmin: true,
-          createdAt: '20.07.2026, 08:00'
         }
       ];
 
